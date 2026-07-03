@@ -3,10 +3,10 @@
 {% block content %}
 <section class="page-header">
     <div>
-        <h1>Categorias</h1>
-        <p>Gerencie as categorias dos seus produtos</p>
+        <h1>Equipamentos</h1>
+        <p>Gerencie  seus equipamentos</p>
     </div>
-    <button class="btn-primary" onclick="openCategoryCreateModal()">+ Nova Categoria</button>
+    <button class="btn-primary" onclick="openCategoryCreateModal()">+ Novo Equipamento</button>
 </section>
 
 <div class="table-card categories-card">
@@ -38,7 +38,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="empty">Nenhuma categoria encontrada.</td>
+                <td colspan="4" class="empty">Nenhum equipamento encontrado.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -48,7 +48,7 @@
 <div id="modalCategoryCreate" class="modal hidden">
     <div class="modal-box compact">
         <div class="modal-header">
-            <h2>Nova Categoria</h2>
+            <h2>Novo Equipamento</h2>
             <button type="button" onclick="closeCategoryCreateModal()">×</button>
         </div>
 
@@ -65,7 +65,7 @@
                 <option value="Inativo">Inativo</option>
             </select>
 
-            <button class="btn-primary full" type="submit">Salvar Categoria</button>
+            <button class="btn-primary full" type="submit">Salvar equipamento</button>
         </form>
     </div>
 </div>
@@ -73,7 +73,7 @@
 <div id="modalCategoryEdit" class="modal hidden">
     <div class="modal-box compact">
         <div class="modal-header">
-            <h2>Editar Categoria</h2>
+            <h2>Editar Equipamento</h2>
             <button type="button" onclick="closeCategoryEditModal()">×</button>
         </div>
 

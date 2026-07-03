@@ -19,12 +19,12 @@ CATEGORIAS_PADRAO = [
 TIPOS_PRODUTO_PADRAO = [
     ("SSD", "Unidades de estado solido"),
     ("Processador", "CPUs e componentes de processamento"),
-    ("Memoria", "Memorias RAM e modulos relacionados"),
-    ("Hard Disk", "Discos rigidos e armazenamentos magneticos"),
+    ("Memória", "Memórias RAM e módulos relacionados"),
+    ("Hard Disk", "Discos rígidos e armazenamentos magnéticos"),
 ]
 LOCAIS_PADRAO = [
     ("EP-Prateleira 3A", "Estoque Principal", "Prateleira principal para itens menores"),
-    ("EP-Prateleira 3B", "Estoque Principal", "Prateleira intermediaria do estoque"),
+    ("EP-Prateleira 3B", "Estoque Principal", "Prateleira intermediária do estoque"),
     ("EP-Prateleira 3C", "Estoque Principal", "Prateleira superior do estoque"),
 ]
 
