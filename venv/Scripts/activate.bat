@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set "VIRTUAL_ENV=C:\EstoqueMaster_SNPro_SemValores\EstoqueMaster\venv"
+set "VIRTUAL_ENV=C:\Users\ian.rezende\Downloads\EstoqueMaster_SNPro_Equipamentos\EstoqueMaster\venv"
 
 if not defined PROMPT set PROMPT=$P$G
 
