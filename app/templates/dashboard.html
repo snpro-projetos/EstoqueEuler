@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header dashboard-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Monte graficos personalizados com filtros por coluna, parecido com uma tabela dinamica do Excel.</p>
+    </div>
+    <button class="btn-primary" type="button" onclick="openDashboardChartModal()">+ Novo Grafico</button>
+</section>
+
+<section class="kpi-grid">
+    <div class="kpi-card">
+        <span>Produtos cadastrados</span>
+        <strong>{{ resumo.total_produtos }}</strong>
+    </div>
+    <div class="kpi-card">
+        <span>Itens em estoque</span>
+        <strong>{{ resumo.total_itens }}</strong>
+    </div>
+    <div class="kpi-card danger-kpi">
+        <span>Estoque baixo</span>
+        <strong>{{ resumo.baixo_estoque }}</strong>
+    </div>
+</section>
+
+<section class="dashboard-help">
+    <strong>Como funciona:</strong> escolha a fonte de dados, a coluna que vai agrupar as linhas e a metrica que sera calculada. Tambem da para filtrar por uma coluna especifica antes de montar o grafico.
+</section>
+
+<section class="charts-grid">
+    {% for item in graficos %}
+        {% set grafico = item.obj %}
+        <article class="chart-card">
+            <div class="chart-head">
+                <div>
+                    <h2>{{ grafico.titulo }}</h2>
+                    <p>{{ item.metrica_label }} por {{ item.coluna_label }}</p>
+                    {% if grafico.filtro_coluna and grafico.filtro_valor %}
+                        <small>Filtro: {{ colunas_label.get(grafico.filtro_coluna, grafico.filtro_coluna) }} {{ grafico.filtro_operador }} "{{ grafico.filtro_valor }}"</small>
+                    {% endif %}
+                </div>
+                <form method="post" action="{{ url_for('main.excluir_grafico_dashboard', grafico_id=grafico.id) }}" data-confirm-kind="grafico" data-confirm-article="este">
+                    <button class="icon-btn danger" type="submit" title="Excluir grafico">🗑</button>
+                </form>
+            </div>
+
+            {% if item.dados %}
+                <div class="chart-area chart-{{ grafico.tipo_grafico }}" data-chart-type="{{ grafico.tipo_grafico }}" data-chart='{{ item.dados|tojson }}'></div>
+            {% else %}
+                <div class="empty chart-empty">Sem dados para esse filtro.</div>
+            {% endif %}
+        </article>
+    {% endfor %}
+</section>
+
+<div class="modal hidden" id="modalDashboardChart">
+    <div class="modal-box compact">
+        <div class="modal-header">
+            <h2>Novo Grafico</h2>
+            <button type="button" onclick="closeDashboardChartModal()">×</button>
+        </div>
+        <form method="post" action="{{ url_for('main.novo_grafico_dashboard') }}" class="product-form dashboard-form">
+            <label>Titulo *</label>
+            <input name="titulo" required placeholder="Ex: Produtos por categoria">
+
+            <div class="grid-2">
+                <div>
+                    <label>Fonte de dados *</label>
+                    <select name="fonte" id="dashFonte" required onchange="updateDashboardOptions()">
+                        {% for chave, fonte in fontes.items() %}
+                            <option value="{{ chave }}">{{ fonte.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label>Tipo de grafico *</label>
+                    <select name="tipo_grafico" required>
+                        <option value="barra">Barra</option>
+                        <option value="pizza">Pizza</option>
+                        <option value="linha">Linha</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <label>Agrupar por coluna *</label>
+                    <select name="coluna_grupo" id="dashColunaGrupo" required></select>
+                </div>
+                <div>
+                    <label>Metrica *</label>
+                    <select name="metrica" id="dashMetrica" required></select>
+                </div>
+            </div>
+
+            <label>Filtro opcional</label>
+            <div class="dashboard-filter-grid">
+                <select name="filtro_coluna" id="dashFiltroColuna">
+                    <option value="">Sem filtro</option>
+                </select>
+                <select name="filtro_operador">
+                    <option value="contem">contem</option>
+                    <option value="igual">igual</option>
+                    <option value="diferente">diferente</option>
+                    <option value="maior">maior que</option>
+                    <option value="menor">menor que</option>
+                </select>
+                <input name="filtro_valor" placeholder="Texto ou número do filtro">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-light" type="button" onclick="closeDashboardChartModal()">Cancelar</button>
+                <button class="btn-primary" type="submit">Adicionar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script id="dashboardConfig" type="application/json">
+{{ {
+    'fontes': {
+        'produtos': {
+            'colunas': fontes['produtos']['colunas'].keys()|list,
+            'metricas': fontes['produtos']['metricas'].keys()|list,
+            'filtros': fontes['produtos']['filtros'].keys()|list
+        },
+        'movimentacoes': {
+            'colunas': fontes['movimentacoes']['colunas'].keys()|list,
+            'metricas': fontes['movimentacoes']['metricas'].keys()|list,
+            'filtros': fontes['movimentacoes']['filtros'].keys()|list
+        }
+    },
+    'labels': colunas_label,
+    'metricasLabels': {
+        'contagem': 'Quantidade de registros',
+        'soma_quantidade': 'Soma da quantidade',
+        'soma_total': 'Soma da quantidade movimentada'
+    }
+}|tojson }}
+</script>
+{% endblock %}

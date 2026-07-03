@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Movimentações</h1>
+        <p>Registre entradas, saídas, transferências e demais movimentações do estoque</p>
+    </div>
+    <button class="btn-primary" onclick="openMovementCreateModal()">+ Nova Movimentação</button>
+</section>
+
+<form class="filters movement-filters" method="get" action="{{ url_for('main.movimentacoes') }}">
+    <input name="busca" value="{{ busca }}" placeholder="Buscar por produto...">
+    <select name="tipo">
+        <option value="">Todos os tipos</option>
+        {% for item in ['Entrada', 'Saida', 'Transferência', 'Empréstimo', 'Retorno', 'Manutenção', 'Descarte'] %}
+            <option value="{{ item }}" {% if tipo == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+    </select>
+    <select name="produto_id">
+        <option value="">Todos produtos</option>
+        {% for produto in produtos %}
+            <option value="{{ produto.id }}" {% if produto_id == produto.id|string %}selected{% endif %}>{{ produto.nome }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn-primary" type="submit">Filtrar</button>
+</form>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Local</th>
+                <th>Data</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mov in movimentacoes %}
+            <tr>
+                <td><span class="movement-badge movement-{{ mov.tipo|lower|replace('í','i')|replace('ç','c')|replace('ã','a')|replace('é','e')|replace('ê','e') }}">{{ mov.tipo }}</span></td>
+                <td><strong>{{ mov.produto_nome }}</strong></td>
+                <td>{{ mov.quantidade }}</td>
+                <td>{{ mov.local }}</td>
+                <td>{{ mov.criado_em.strftime('%d/%m/%Y, %H:%M') }}</td>
+                <td class="actions">
+                    <button
+                        title="Editar"
+                        class="icon-btn edit"
+                        type="button"
+                        onclick="openMovementEditModal(this)"
+                        data-id="{{ mov.id }}"
+                        data-tipo="{{ mov.tipo }}"
+                        data-produto-id="{{ mov.produto_id }}"
+                        data-quantidade="{{ mov.quantidade }}"
+                        data-local="{{ mov.local }}"
+                        data-criado-em="{{ mov.criado_em.strftime('%Y-%m-%dT%H:%M') }}"
+                        data-observacao="{{ mov.observacao or '' }}"
+                    >✎</button>
+                    <form method="post" action="{{ url_for('main.excluir_movimentacao', movimentacao_id=mov.id) }}" data-confirm-kind="movimentação" data-confirm-article="esta">
+                        <button title="Excluir" class="icon-btn danger" type="submit">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="empty">Nenhuma movimentação encontrada.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="modalMovementCreate" class="modal hidden">
+    <div class="modal-box compact">
+        <div class="modal-header">
+            <h2>Nova Movimentação</h2>
+            <button type="button" onclick="closeMovementCreateModal()">×</button>
+        </div>
+
+        <form method="post" action="{{ url_for('main.nova_movimentacao') }}" class="product-form">
+            <label>Tipo *</label>
+            <select name="tipo" required>
+                <option value="Entrada">Entrada</option>
+                <option value="Saida">Saída</option>
+                <option value="Transferência">Transferência</option>
+                <option value="Empréstimo">Empréstimo</option>
+                <option value="Retorno">Retorno</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Descarte">Descarte</option>
+            </select>
+
+            <label>Produto *</label>
+            <select name="produto_id" required>
+                <option value="">Selecione</option>
+                {% for produto in produtos %}
+                    <option value="{{ produto.id }}">{{ produto.nome }} - {{ produto.sku }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Quantidade *</label>
+            <input type="number" name="quantidade" value="1" min="1" required>
+
+            <label>Local *</label>
+            <select name="local" required>
+                {% for local in locais %}<option value="{{ local }}">{{ local }}</option>{% endfor %}
+            </select>
+
+            <label>Observação</label>
+            <textarea name="observacao" rows="3" placeholder="Detalhes opcionais da movimentação"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn-light" type="button" onclick="closeMovementCreateModal()">Cancelar</button>
+                <button class="btn-primary" type="submit">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<div id="modalMovementEdit" class="modal hidden">
+    <div class="modal-box compact">
+        <div class="modal-header">
+            <h2>Editar Movimentação</h2>
+            <button type="button" onclick="closeMovementEditModal()">×</button>
+        </div>
+
+        <form id="movementEditForm" method="post" action="#" class="product-form">
+            <label>Tipo *</label>
+            <select id="edit_mov_tipo" name="tipo" required>
+                <option value="Entrada">Entrada</option>
+                <option value="Saida">Saída</option>
+                <option value="Transferência">Transferência</option>
+                <option value="Empréstimo">Empréstimo</option>
+                <option value="Retorno">Retorno</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Descarte">Descarte</option>
+            </select>
+
+            <label>Produto *</label>
+            <select id="edit_mov_produto_id" name="produto_id" required>
+                {% for produto in produtos %}
+                    <option value="{{ produto.id }}">{{ produto.nome }} - {{ produto.sku }}</option>
+                {% endfor %}
+            </select>
+
+            <label>Quantidade *</label>
+            <input id="edit_mov_quantidade" type="number" name="quantidade" value="1" min="1" required>
+
+            <label>Local *</label>
+            <select id="edit_mov_local" name="local" required>
+                {% for local in locais %}<option value="{{ local }}">{{ local }}</option>{% endfor %}
+            </select>
+
+            <label>Data da movimentação</label>
+            <input id="edit_mov_criado_em" type="datetime-local" name="criado_em">
+
+            <label>Observação</label>
+            <textarea id="edit_mov_observacao" name="observacao" rows="3" placeholder="Detalhes opcionais da movimentação"></textarea>
+
+            <div class="modal-actions">
+                <button class="btn-light" type="button" onclick="closeMovementEditModal()">Cancelar</button>
+                <button class="btn-primary" type="submit">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header report-header">
+    <div>
+        <h1>Relatórios</h1>
+        <p>Gere, exporte e importe dados do estoque por CSV ou Excel</p>
+    </div>
+</section>
+
+<div class="report-toolbar">
+    <form class="report-select" method="get" action="{{ url_for('main.relatorios') }}">
+        <select name="tipo" onchange="this.form.submit()">
+            <option value="produtos" {% if tipo == 'produtos' %}selected{% endif %}>Produtos Cadastrados</option>
+            <option value="baixo_estoque" {% if tipo == 'baixo_estoque' %}selected{% endif %}>Produtos com Estoque Baixo</option>
+            <option value="movimentacoes" {% if tipo == 'movimentacoes' %}selected{% endif %}>Movimentações</option>
+        </select>
+    </form>
+
+    <a class="btn-light export-link" href="{{ url_for('main.exportar_relatorio', tipo=tipo) }}">⇩ Exportar CSV</a>
+
+    <form class="import-form" method="post" action="{{ url_for('main.importar_planilha') }}" enctype="multipart/form-data">
+        <label class="file-picker">
+            <input id="arquivoImportacao" type="file" name="arquivo" accept=".csv,.xlsx" required>
+            <span class="file-picker-button">Escolher arquivo</span>
+            <span class="file-picker-name" id="arquivoImportacaoNome">Nenhum arquivo selecionado</span>
+        </label>
+        <button class="btn-primary" type="submit">Importar CSV/Excel</button>
+    </form>
+
+    <form method="post" action="{{ url_for('main.apagar_dados_importados') }}" data-confirm-kind="dados importados" data-confirm-article="os" class="delete-import-form">
+        <button class="btn-danger" type="submit">Apagar importações</button>
+    </form>
+</div>
+
+<div class="import-help">
+    <strong>Importação de produtos:</strong> a planilha pode ter colunas como Código/SKU, Nome, Categoria, Tipo, Local, Quantidade, Estoque Mínimo, Status e Descrição.
+    Campos vazios, nulos ou quebrados recebem valores padrão: quantidade 0, estoque mínimo 0, categoria "Sem Categoria", tipo "Sem Tipo", local "Estoque Principal" e status "Ativo". Se o SKU já existir, o produto será atualizado; se não existir, será criado. O botão "Apagar importações" remove os produtos criados/atualizados pelas importações registradas.
+</div>
+
+{% if tipo == 'movimentacoes' %}
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Qtd</th>
+                <th>Local</th>
+                <th>Data</th>
+                <th>Observação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mov in movimentacoes %}
+            <tr>
+                <td><span class="movement-badge movement-{{ mov.tipo|lower|replace('í','i')|replace('ç','c')|replace('ã','a')|replace('é','e')|replace('ê','e') }}">{{ mov.tipo }}</span></td>
+                <td><strong>{{ mov.produto_nome }}</strong></td>
+                <td>{{ mov.quantidade }}</td>
+                <td>{{ mov.local }}</td>
+                <td>{{ mov.criado_em.strftime('%d/%m/%Y, %H:%M') }}</td>
+                <td>{{ mov.observacao or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="empty">Nenhuma movimentação encontrada.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+{% set lista = baixo_estoque if tipo == 'baixo_estoque' else produtos %}
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Local</th>
+                <th>Quantidade</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produto in lista %}
+            <tr>
+                <td><span class="code">{{ produto.sku }}</span></td>
+                <td><strong>{{ produto.nome }}</strong></td>
+                <td>{{ produto.categoria }}</td>
+                <td>{{ produto.tipo_produto or '-' }}</td>
+                <td>{{ produto.local }}</td>
+                <td>{{ produto.quantidade }}</td>
+                <td>{{ produto.status }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">Nenhum produto encontrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

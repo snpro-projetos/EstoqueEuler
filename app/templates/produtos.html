@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Produtos</h1>
+        <p>Gerencie todos os seus produtos em estoque</p>
+    </div>
+    <button class="btn-primary" onclick="openCreateModal()">+ Novo Produto</button>
+</section>
+
+<form class="filters" method="get" action="{{ url_for('main.produtos') }}">
+    <input type="text" name="busca" placeholder="Buscar produto..." value="{{ busca }}">
+
+    <select name="categoria">
+        <option value="">Todas categorias</option>
+        {% for item in categorias %}
+            <option value="{{ item }}" {% if categoria == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="local">
+        <option value="">Todos locais</option>
+        {% for item in locais %}
+            <option value="{{ item }}" {% if local == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="status">
+        <option value="">Todos</option>
+        <option value="Ativo" {% if status == "Ativo" %}selected{% endif %}>Ativo</option>
+        <option value="Inativo" {% if status == "Inativo" %}selected{% endif %}>Inativo</option>
+    </select>
+
+    <button class="btn-light" type="submit">Filtrar</button>
+</form>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Código</th>
+                <th>Categoria</th>
+                <th>Qtd</th>
+                <th>Locais</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produto in produtos %}
+            <tr>
+                <td>{{ produto.nome }}</td>
+                <td class="code">{{ produto.sku }}</td>
+                <td>{{ produto.categoria }}</td>
+                <td>{{ produto.quantidade }}</td>
+                <td><span class="pill">{{ produto.local }} ({{ produto.quantidade }})</span></td>
+                <td><span class="status-low">{{ produto.status_estoque }}</span></td>
+                <td class="actions">
+                    <button title="Visualizar" class="icon-btn view" type="button">👁</button>
+                    <button title="Editar" class="icon-btn edit" type="button" onclick="openEditModal(this)"
+                        data-id="{{ produto.id }}"
+                        data-sku="{{ produto.sku }}"
+                        data-nome="{{ produto.nome }}"
+                        data-categoria="{{ produto.categoria }}"
+                        data-tipo-produto="{{ produto.tipo_produto or '' }}"
+                        data-local="{{ produto.local }}"
+                        data-quantidade="{{ produto.quantidade }}"
+                        data-estoque-minimo="{{ produto.estoque_minimo }}"
+                        data-status="{{ produto.status }}"
+                        data-descricao="{{ produto.descricao or '' }}">✎</button>
+                    <form method="post" action="{{ url_for('main.excluir_produto', produto_id=produto.id) }}" data-confirm-kind="produto" data-confirm-article="este">
+                        <button title="Excluir" class="icon-btn danger" type="submit">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="empty">Nenhum produto encontrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="modalCreate" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Novo Produto</h2>
+            <button type="button" onclick="closeCreateModal()">×</button>
+        </div>
+
+        <form method="post" action="{{ url_for('main.novo_produto') }}" class="product-form">
+            <label>Código (SKU) *</label>
+            <input name="sku" placeholder="Ex: PROD-001" required>
+
+            <label>Nome do Produto *</label>
+            <input name="nome" placeholder="Nome do produto" required>
+
+            <label>Categoria *</label>
+            <select name="categoria" required>
+                <option value="">Selecione</option>
+                {% for item in categorias %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <label>Tipo de Produto</label>
+            <select name="tipo_produto">
+                <option value="">Nenhum</option>
+                {% for item in tipos_produto %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <label>Local de Armazenamento *</label>
+            <select name="local" required>
+                <option value="">Selecione</option>
+                {% for item in locais %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <div class="grid-2">
+                <div>
+                    <label>Quantidade</label>
+                    <input type="number" name="quantidade" value="1" min="0">
+                </div>
+                <div>
+                    <label>Limite Estoque Baixo</label>
+                    <input type="number" name="estoque_minimo" value="1" min="0">
+                </div>
+            </div>
+
+            <label>Status</label>
+            <select name="status">
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+            </select>
+
+            <label>Descrição</label>
+            <textarea name="descricao" rows="3"></textarea>
+
+            <button class="btn-primary full" type="submit">Salvar Produto</button>
+        </form>
+    </div>
+</div>
+<div id="modalEdit" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Editar Produto</h2>
+            <button type="button" onclick="closeEditModal()">×</button>
+        </div>
+
+        <form id="editForm" method="post" action="#" class="product-form">
+            <label>Código (SKU) *</label>
+            <input id="edit_sku" name="sku" required>
+
+            <label>Nome do Produto *</label>
+            <input id="edit_nome" name="nome" required>
+
+            <label>Categoria *</label>
+            <select id="edit_categoria" name="categoria" required>
+                <option value="">Selecione</option>
+                {% for item in categorias %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <label>Tipo de Produto</label>
+            <select id="edit_tipo_produto" name="tipo_produto">
+                <option value="">Nenhum</option>
+                {% for item in tipos_produto %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <label>Local de Armazenamento *</label>
+            <select id="edit_local" name="local" required>
+                <option value="">Selecione</option>
+                {% for item in locais %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+            </select>
+
+            <div class="grid-2">
+                <div>
+                    <label>Quantidade</label>
+                    <input id="edit_quantidade" type="number" name="quantidade" min="0">
+                </div>
+                <div>
+                    <label>Limite Estoque Baixo</label>
+                    <input id="edit_estoque_minimo" type="number" name="estoque_minimo" min="0">
+                </div>
+            </div>
+
+            <label>Status</label>
+            <select id="edit_status" name="status">
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+            </select>
+
+            <label>Descrição</label>
+            <textarea id="edit_descricao" name="descricao" rows="3"></textarea>
+
+            <button class="btn-primary full" type="submit">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
