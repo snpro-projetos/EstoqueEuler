@@ -3,8 +3,8 @@ from datetime import datetime
 
 
 
-class Categoria(db.Model):
-    __tablename__ = "categorias"
+class Equipamento(db.Model):
+    __tablename__ = "equipamentos"
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), unique=True, nullable=False)
@@ -37,7 +37,7 @@ class Produto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.String(50), unique=True, nullable=False)
     nome = db.Column(db.String(150), nullable=False)
-    categoria = db.Column(db.String(80), nullable=False)
+    equipamento = db.Column(db.String(80), nullable=False)
     tipo_produto = db.Column(db.String(80), nullable=True)
     local = db.Column(db.String(100), nullable=False)
     quantidade = db.Column(db.Integer, nullable=False, default=1)
@@ -92,7 +92,7 @@ class DashboardGrafico(db.Model):
     titulo = db.Column(db.String(120), nullable=False)
     fonte = db.Column(db.String(40), nullable=False, default="produtos")
     tipo_grafico = db.Column(db.String(20), nullable=False, default="barra")
-    coluna_grupo = db.Column(db.String(60), nullable=False, default="categoria")
+    coluna_grupo = db.Column(db.String(60), nullable=False, default="equipamento")
     metrica = db.Column(db.String(60), nullable=False, default="contagem")
     filtro_coluna = db.Column(db.String(60), nullable=True)
     filtro_operador = db.Column(db.String(20), nullable=True)

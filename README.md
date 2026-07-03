@@ -42,8 +42,8 @@ http://127.0.0.1:5000
 
 - Página Tipos de Produto criada com cadastro, edição e exclusão.
 - Produtos agora usam os tipos cadastrados no banco.
-- Categorias e Tipos de Produto possuem proteção contra exclusão quando existem produtos vinculados.
-- Modal de confirmação de exclusão padronizado para produto, categoria e tipo de produto.
+- Equipamentos e Tipos de Produto possuem proteção contra exclusão quando existem produtos vinculados.
+- Modal de confirmação de exclusão padronizado para produto, equipamento e tipo de produto.
 - Ícones de editar, visualizar e excluir ficaram mais visíveis.
 - Menu lateral revisado com identidade SNPro Estoque.
 - Paleta visual atualizada para diferenciar das versões anteriores.

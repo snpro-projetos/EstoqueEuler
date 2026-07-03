@@ -34,8 +34,8 @@
 </div>
 
 <div class="import-help">
-    <strong>Importação de produtos:</strong> a planilha pode ter colunas como Código/SKU, Nome, Categoria, Tipo, Local, Quantidade, Estoque Mínimo, Status e Descrição.
-    Campos vazios, nulos ou quebrados recebem valores padrão: quantidade 0, estoque mínimo 0, categoria "Sem Categoria", tipo "Sem Tipo", local "Estoque Principal" e status "Ativo". Se o SKU já existir, o produto será atualizado; se não existir, será criado. O botão "Apagar importações" remove os produtos criados/atualizados pelas importações registradas.
+    <strong>Importação de produtos:</strong> a planilha pode ter colunas como Código/SKU, Nome, Equipamento, Tipo, Local, Quantidade, Estoque Mínimo, Status e Descrição.
+    Campos vazios, nulos ou quebrados recebem valores padrão: quantidade 0, estoque mínimo 0, equipamento "Sem Equipamento", tipo "Sem Tipo", local "Estoque Principal" e status "Ativo". Se o SKU já existir, o produto será atualizado; se não existir, será criado. O botão "Apagar importações" remove os produtos criados/atualizados pelas importações registradas.
 </div>
 
 {% if tipo == 'movimentacoes' %}
@@ -75,7 +75,7 @@
             <tr>
                 <th>Código</th>
                 <th>Nome</th>
-                <th>Categoria</th>
+                <th>Equipamento</th>
                 <th>Tipo</th>
                 <th>Local</th>
                 <th>Quantidade</th>
@@ -87,7 +87,7 @@
             <tr>
                 <td><span class="code">{{ produto.sku }}</span></td>
                 <td><strong>{{ produto.nome }}</strong></td>
-                <td>{{ produto.categoria }}</td>
+                <td>{{ produto.equipamento }}</td>
                 <td>{{ produto.tipo_produto or '-' }}</td>
                 <td>{{ produto.local }}</td>
                 <td>{{ produto.quantidade }}</td>

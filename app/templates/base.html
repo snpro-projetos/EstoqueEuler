@@ -18,7 +18,7 @@
         <nav>
             <a class="{% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}"><span class="nav-ico">▦</span> Dashboard</a>
             <a class="{% if active_page == 'produtos' %}active{% endif %}" href="{{ url_for('main.produtos') }}"><span class="nav-ico">▧</span> Produtos</a>
-            <a class="{% if active_page == 'categorias' %}active{% endif %}" href="{{ url_for('main.categorias') }}"><span class="nav-ico">◇</span> Equipamentos</a>
+            <a class="{% if active_page == 'equipamentos' %}active{% endif %}" href="{{ url_for('main.equipamentos') }}"><span class="nav-ico">◇</span> Equipamentos</a>
             <a class="{% if active_page == 'tipos_produto' %}active{% endif %}" href="{{ url_for('main.tipos_produto') }}"><span class="nav-ico">▱</span> Tipos de Produto</a>
             <a class="{% if active_page == 'locais' %}active{% endif %}" href="{{ url_for('main.locais') }}"><span class="nav-ico">⌖</span> Locais</a>
             <a class="{% if active_page == 'movimentacoes' %}active{% endif %}" href="{{ url_for('main.movimentacoes') }}"><span class="nav-ico">↔</span> Movimentações</a>

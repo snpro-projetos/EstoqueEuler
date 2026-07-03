@@ -19,7 +19,7 @@ function openEditModal(button) {
 
     document.getElementById("edit_sku").value = dataset.sku || "";
     document.getElementById("edit_nome").value = dataset.nome || "";
-    document.getElementById("edit_categoria").value = dataset.categoria || "";
+    document.getElementById("edit_equipamento").value = dataset.equipamento || "";
     document.getElementById("edit_tipo_produto").value = dataset.tipoProduto || "";
     document.getElementById("edit_local").value = dataset.local || "";
     document.getElementById("edit_quantidade").value = dataset.quantidade || 0;
@@ -39,10 +39,10 @@ function openCategoryEditModal(button) {
     const dataset = button.dataset;
     const form = document.getElementById("categoryEditForm");
 
-    form.action = `/categorias/editar/${dataset.id}`;
-    document.getElementById("edit_categoria_nome").value = dataset.nome || "";
-    document.getElementById("edit_categoria_descricao").value = dataset.descricao || "";
-    document.getElementById("edit_categoria_status").value = dataset.status || "Ativo";
+    form.action = `/equipamentos/editar/${dataset.id}`;
+    document.getElementById("edit_equipamento_nome").value = dataset.nome || "";
+    document.getElementById("edit_equipamento_descricao").value = dataset.descricao || "";
+    document.getElementById("edit_equipamento_status").value = dataset.status || "Ativo";
 
     showModal("modalCategoryEdit");
 }

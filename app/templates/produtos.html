@@ -12,10 +12,10 @@
 <form class="filters" method="get" action="{{ url_for('main.produtos') }}">
     <input type="text" name="busca" placeholder="Buscar produto..." value="{{ busca }}">
 
-    <select name="categoria">
-        <option value="">Todas categorias</option>
-        {% for item in categorias %}
-            <option value="{{ item }}" {% if categoria == item %}selected{% endif %}>{{ item }}</option>
+    <select name="equipamento">
+        <option value="">Todos os equipamentos</option>
+        {% for item in equipamentos %}
+            <option value="{{ item }}" {% if equipamento == item %}selected{% endif %}>{{ item }}</option>
         {% endfor %}
     </select>
 
@@ -41,7 +41,7 @@
             <tr>
                 <th>Produto</th>
                 <th>Código</th>
-                <th>Categoria</th>
+                <th>Equipamento</th>
                 <th>Qtd</th>
                 <th>Locais</th>
                 <th>Status</th>
@@ -53,7 +53,7 @@
             <tr>
                 <td>{{ produto.nome }}</td>
                 <td class="code">{{ produto.sku }}</td>
-                <td>{{ produto.categoria }}</td>
+                <td>{{ produto.equipamento }}</td>
                 <td>{{ produto.quantidade }}</td>
                 <td><span class="pill">{{ produto.local }} ({{ produto.quantidade }})</span></td>
                 <td><span class="status-low">{{ produto.status_estoque }}</span></td>
@@ -63,7 +63,7 @@
                         data-id="{{ produto.id }}"
                         data-sku="{{ produto.sku }}"
                         data-nome="{{ produto.nome }}"
-                        data-categoria="{{ produto.categoria }}"
+                        data-equipamento="{{ produto.equipamento }}"
                         data-tipo-produto="{{ produto.tipo_produto or '' }}"
                         data-local="{{ produto.local }}"
                         data-quantidade="{{ produto.quantidade }}"
@@ -98,10 +98,10 @@
             <label>Nome do Produto *</label>
             <input name="nome" placeholder="Nome do produto" required>
 
-            <label>Categoria *</label>
-            <select name="categoria" required>
+            <label>Equipamento *</label>
+            <select name="equipamento" required>
                 <option value="">Selecione</option>
-                {% for item in categorias %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                {% for item in equipamentos %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
             </select>
 
             <label>Tipo de Produto</label>
@@ -154,10 +154,10 @@
             <label>Nome do Produto *</label>
             <input id="edit_nome" name="nome" required>
 
-            <label>Categoria *</label>
-            <select id="edit_categoria" name="categoria" required>
+            <label>Equipamento *</label>
+            <select id="edit_equipamento" name="equipamento" required>
                 <option value="">Selecione</option>
-                {% for item in categorias %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                {% for item in equipamentos %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
             </select>
 
             <label>Tipo de Produto</label>
