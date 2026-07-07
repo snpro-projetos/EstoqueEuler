@@ -11,6 +11,31 @@ function hideModal(id) {
 function openCreateModal() { showModal("modalCreate"); }
 function closeCreateModal() { hideModal("modalCreate"); }
 
+function setText(id, value, fallback) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value || fallback || "-";
+}
+
+function openProductViewModal(button) {
+    const dataset = button.dataset;
+
+    setText("view_nome", dataset.nome);
+    setText("view_status_estoque", dataset.statusEstoque, "Normal");
+    setText("view_sku", dataset.sku);
+    setText("view_status", dataset.status);
+    setText("view_equipamento", dataset.equipamento);
+    setText("view_tipo_produto", dataset.tipoProduto, "Nenhum");
+    setText("view_local", dataset.local);
+    setText("view_quantidade", dataset.quantidade, "0");
+    setText("view_estoque_minimo", dataset.estoqueMinimo, "0");
+    setText("view_descricao", dataset.descricao, "Sem descrição");
+
+    showModal("modalProductView");
+}
+
+function closeProductViewModal() { hideModal("modalProductView"); }
+
 function openEditModal(button) {
     const dataset = button.dataset;
     const form = document.getElementById("editForm");
@@ -51,6 +76,7 @@ function closeCategoryEditModal() { hideModal("modalCategoryEdit"); }
 
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
+        closeProductViewModal();
         closeCreateModal();
         closeEditModal();
         closeCategoryCreateModal();

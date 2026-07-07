@@ -58,7 +58,18 @@
                 <td><span class="pill">{{ produto.local }} ({{ produto.quantidade }})</span></td>
                 <td><span class="status-low">{{ produto.status_estoque }}</span></td>
                 <td class="actions">
-                    <button title="Visualizar" class="icon-btn view" type="button">👁</button>
+                    <button title="Visualizar" class="icon-btn view" type="button" onclick="openProductViewModal(this)"
+                        data-id="{{ produto.id }}"
+                        data-sku="{{ produto.sku }}"
+                        data-nome="{{ produto.nome }}"
+                        data-equipamento="{{ produto.equipamento }}"
+                        data-tipo-produto="{{ produto.tipo_produto or '' }}"
+                        data-local="{{ produto.local }}"
+                        data-quantidade="{{ produto.quantidade }}"
+                        data-estoque-minimo="{{ produto.estoque_minimo }}"
+                        data-status="{{ produto.status }}"
+                        data-status-estoque="{{ produto.status_estoque }}"
+                        data-descricao="{{ produto.descricao or '' }}">👁</button>
                     <button title="Editar" class="icon-btn edit" type="button" onclick="openEditModal(this)"
                         data-id="{{ produto.id }}"
                         data-sku="{{ produto.sku }}"
@@ -82,6 +93,56 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div id="modalProductView" class="modal hidden">
+    <div class="modal-box compact">
+        <div class="modal-header">
+            <h2>Visualizar Produto</h2>
+            <button type="button" onclick="closeProductViewModal()">×</button>
+        </div>
+
+        <div class="product-view">
+            <h3 id="view_nome">Produto</h3>
+            <span id="view_status_estoque" class="status-low">Normal</span>
+
+            <dl class="detail-grid">
+                <div>
+                    <dt>Código (SKU)</dt>
+                    <dd id="view_sku">-</dd>
+                </div>
+                <div>
+                    <dt>Status</dt>
+                    <dd id="view_status">-</dd>
+                </div>
+                <div>
+                    <dt>Equipamento</dt>
+                    <dd id="view_equipamento">-</dd>
+                </div>
+                <div>
+                    <dt>Tipo de Produto</dt>
+                    <dd id="view_tipo_produto">-</dd>
+                </div>
+                <div>
+                    <dt>Local</dt>
+                    <dd id="view_local">-</dd>
+                </div>
+                <div>
+                    <dt>Quantidade</dt>
+                    <dd id="view_quantidade">-</dd>
+                </div>
+                <div>
+                    <dt>Limite Estoque Baixo</dt>
+                    <dd id="view_estoque_minimo">-</dd>
+                </div>
+            </dl>
+
+            <div class="detail-description">
+                <span>Descrição</span>
+                <p id="view_descricao">-</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="modalCreate" class="modal hidden">

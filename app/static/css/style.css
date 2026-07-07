@@ -74,10 +74,18 @@ td { padding: 18px 14px; border-top: 1px solid #e4ebf5; font-size: 14px; vertica
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .modal-header h2 { margin: 0; color: var(--snpro-ink); }
 .modal-header button { border: 0; background: none; font-size: 28px; cursor: pointer; color: var(--snpro-ink); }
+.product-view h3 { margin: 0 0 8px; color: var(--snpro-ink); font-size: 22px; }
+.product-view > .status-low { display: inline-block; margin-bottom: 16px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.detail-grid div, .detail-description { border: 1px solid var(--snpro-border); border-radius: 10px; padding: 12px; background: #fbfdff; }
+.detail-grid dt, .detail-description span { color: var(--snpro-muted); font-size: 12px; font-weight: 900; margin-bottom: 6px; }
+.detail-grid dd { margin: 0; color: var(--snpro-ink); font-weight: 800; overflow-wrap: anywhere; }
+.detail-description { margin-top: 12px; }
+.detail-description p { margin-top: 6px; color: var(--snpro-ink); overflow-wrap: anywhere; white-space: pre-wrap; }
 .product-form label { display: block; margin: 12px 0 6px; font-weight: 900; font-size: 13px; color: #334155; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .full { width: 100%; margin-top: 16px; }
-@media (max-width: 900px) { .sidebar { position: static; width: auto; min-height: auto; } .content { margin-left: 0; } .filters { grid-template-columns: 1fr; } .table-card { overflow-x: auto; margin-left: 16px; margin-right: 16px; } .page-header { padding-left: 16px; padding-right: 16px; } }
+@media (max-width: 900px) { .sidebar { position: static; width: auto; min-height: auto; } .content { margin-left: 0; } .filters { grid-template-columns: 1fr; } .table-card { overflow-x: auto; margin-left: 16px; margin-right: 16px; } .page-header { padding-left: 16px; padding-right: 16px; } .detail-grid { grid-template-columns: 1fr; } }
 .modal-actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px; }
 .movement-filters { grid-template-columns: 1fr 180px 220px 90px; }
 .movement-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid transparent; }
