@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file
 from sqlalchemy import or_, func
 import csv
-from io import StringIO
+from io import StringIO, BytesIO
 from unicodedata import normalize
 from . import db
 from datetime import datetime
@@ -836,9 +836,59 @@ def excluir_movimentacao(movimentacao_id):
 
 
 
+def _tipo_relatorio_valido(tipo):
+    if tipo in {"produtos", "baixo_estoque", "movimentacoes"}:
+        return tipo
+    return "produtos"
+
+
+def _conteudo_relatorio(tipo):
+    tipo = _tipo_relatorio_valido(tipo)
+
+    if tipo == "movimentacoes":
+        cabecalhos = ["Tipo", "Produto", "Quantidade", "Local", "Data", "Observacao"]
+        linhas = [
+            [
+                mov.tipo,
+                mov.produto_nome,
+                mov.quantidade,
+                mov.local,
+                mov.criado_em.strftime("%d/%m/%Y %H:%M") if mov.criado_em else "",
+                mov.observacao or "",
+            ]
+            for mov in Movimentacao.query.order_by(Movimentacao.criado_em.desc()).all()
+        ]
+        return "Movimentacoes", "relatorio_movimentacoes", cabecalhos, linhas
+
+    lista = Produto.query
+    titulo = "Produtos Cadastrados"
+    nome_arquivo = "relatorio_produtos"
+    if tipo == "baixo_estoque":
+        lista = lista.filter(Produto.quantidade <= Produto.estoque_minimo)
+        titulo = "Produtos com Estoque Baixo"
+        nome_arquivo = "relatorio_baixo_estoque"
+
+    cabecalhos = ["Codigo", "Nome", "Equipamento", "Tipo", "Local", "Quantidade", "Estoque Minimo", "Status", "Descricao"]
+    linhas = [
+        [
+            produto.sku,
+            produto.nome,
+            produto.equipamento,
+            produto.tipo_produto or "",
+            produto.local,
+            produto.quantidade,
+            produto.estoque_minimo,
+            produto.status,
+            produto.descricao or "",
+        ]
+        for produto in lista.order_by(Produto.nome.asc()).all()
+    ]
+    return titulo, nome_arquivo, cabecalhos, linhas
+
+
 @main.route("/relatorios")
 def relatorios():
-    tipo = request.args.get("tipo", "produtos").strip()
+    tipo = _tipo_relatorio_valido(request.args.get("tipo", "produtos").strip())
 
     produtos_lista = Produto.query.order_by(Produto.nome.asc()).all()
     movimentacoes_lista = Movimentacao.query.order_by(Movimentacao.criado_em.desc()).all()
@@ -858,29 +908,64 @@ def relatorios():
 
 @main.route("/relatorios/exportar")
 def exportar_relatorio():
-    tipo = request.args.get("tipo", "produtos")
+    tipo = _tipo_relatorio_valido(request.args.get("tipo", "produtos"))
     saida = StringIO()
     writer = csv.writer(saida, delimiter=";")
+    _, nome_arquivo, cabecalhos, linhas = _conteudo_relatorio(tipo)
 
-    if tipo == "movimentacoes":
-        writer.writerow(["Tipo", "Produto", "Quantidade", "Local", "Data", "Observacao"])
-        for mov in Movimentacao.query.order_by(Movimentacao.criado_em.desc()).all():
-            writer.writerow([mov.tipo, mov.produto_nome, mov.quantidade, mov.local, mov.criado_em.strftime("%d/%m/%Y %H:%M"), mov.observacao or ""])
-        nome = "relatorio_movimentacoes.csv"
-    else:
-        lista = Produto.query
-        if tipo == "baixo_estoque":
-            lista = lista.filter(Produto.quantidade <= Produto.estoque_minimo)
-        writer.writerow(["Codigo", "Nome", "Equipamento", "Tipo", "Local", "Quantidade", "Estoque Minimo", "Status", "Descricao"])
-        for produto in lista.order_by(Produto.nome.asc()).all():
-            writer.writerow([produto.sku, produto.nome, produto.equipamento, produto.tipo_produto or "", produto.local, produto.quantidade, produto.estoque_minimo, produto.status, produto.descricao or ""])
-        nome = "relatorio_baixo_estoque.csv" if tipo == "baixo_estoque" else "relatorio_produtos.csv"
+    writer.writerow(cabecalhos)
+    writer.writerows(linhas)
 
     conteudo = "\ufeff" + saida.getvalue()
     return Response(
         conteudo,
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename={nome}"},
+        headers={"Content-Disposition": f"attachment; filename={nome_arquivo}.csv"},
+    )
+
+
+@main.route("/relatorios/exportar-excel")
+def exportar_relatorio_excel():
+    tipo = _tipo_relatorio_valido(request.args.get("tipo", "produtos"))
+    titulo, nome_arquivo, cabecalhos, linhas = _conteudo_relatorio(tipo)
+
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+        from openpyxl.utils import get_column_letter
+    except Exception as erro:
+        flash(f"Erro ao exportar Excel: dependencia openpyxl indisponivel ({erro}).", "error")
+        return redirect(url_for("main.relatorios", tipo=tipo))
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = titulo[:31]
+    ws.append(cabecalhos)
+    for linha in linhas:
+        ws.append(linha)
+
+    header_fill = PatternFill("solid", fgColor="D9E2EF")
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+        cell.fill = header_fill
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+    for coluna in ws.columns:
+        letra = get_column_letter(coluna[0].column)
+        maior = max(len(str(cell.value or "")) for cell in coluna)
+        ws.column_dimensions[letra].width = min(max(maior + 2, 12), 45)
+
+    arquivo = BytesIO()
+    wb.save(arquivo)
+    arquivo.seek(0)
+
+    return send_file(
+        arquivo,
+        as_attachment=True,
+        download_name=f"{nome_arquivo}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 

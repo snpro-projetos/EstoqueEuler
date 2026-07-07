@@ -103,6 +103,22 @@ td { padding: 18px 14px; border-top: 1px solid #e4ebf5; font-size: 14px; vertica
 .import-help { margin: 0 38px 18px; padding: 13px 15px; border: 1px dashed var(--snpro-border); border-radius: 12px; color: var(--snpro-muted); background: #ffffff; font-size: 14px; }
 @media (max-width: 900px) { .report-toolbar, .import-form { display: grid; grid-template-columns: 1fr; margin-left: 0; } .report-select, .import-form input[type="file"] { width: 100%; } }
 
+@media print {
+    body { background: #ffffff; color: #000000; }
+    .sidebar, .topbar, .messages, .report-toolbar, .import-help, .modal { display: none !important; }
+    .content { margin-left: 0; min-height: auto; }
+    .page-header { padding: 0 0 14px; border-bottom: 1px solid #cbd5e1; margin-bottom: 14px; }
+    .page-header h1 { color: #000000; font-size: 24px; }
+    .page-header p { color: #334155; }
+    .table-card { margin: 0; border: 0; box-shadow: none; overflow: visible; }
+    table { font-size: 11px; page-break-inside: auto; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th, td { border: 1px solid #cbd5e1; padding: 7px 8px; color: #000000; }
+    th { background: #eef2f7 !important; }
+    .pill, .status-low, .movement-badge, .code { color: #000000; background: transparent; border: 0; padding: 0; box-shadow: none; }
+}
+
 /* Importacao de planilhas - campo de arquivo customizado */
 .file-picker {
     min-width: 360px;

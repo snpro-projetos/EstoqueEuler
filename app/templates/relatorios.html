@@ -18,6 +18,8 @@
     </form>
 
     <a class="btn-light export-link" href="{{ url_for('main.exportar_relatorio', tipo=tipo) }}">⇩ Exportar CSV</a>
+    <a class="btn-light export-link" href="{{ url_for('main.exportar_relatorio_excel', tipo=tipo) }}">⇩ Exportar Excel</a>
+    <button class="btn-light export-link" type="button" onclick="printReport()">⎙ Imprimir PDF</button>
 
     <form class="import-form" method="post" action="{{ url_for('main.importar_planilha') }}" enctype="multipart/form-data">
         <label class="file-picker">
