@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - SNPro Estoque</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+    <main class="login-shell">
+        <section class="login-panel">
+            <div class="login-brand">
+                <strong>SNPRO</strong>
+                <small>ESTOQUE</small>
+            </div>
+
+            <h1>Acessar sistema</h1>
+            <p>Entre com seu usuario para continuar.</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages login-messages">
+                        {% for category, message in messages %}
+                            <div class="alert {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="post" class="product-form login-form">
+                <label>E-mail</label>
+                <input type="email" name="email" placeholder="admin@snpro.local" required autofocus>
+
+                <label>Senha</label>
+                <input type="password" name="senha" placeholder="Sua senha" required>
+
+                <button class="btn-primary full" type="submit">Entrar</button>
+            </form>
+
+        </section>
+    </main>
+</body>
+</html>

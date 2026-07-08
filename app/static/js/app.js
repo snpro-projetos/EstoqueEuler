@@ -74,6 +74,24 @@ function openCategoryEditModal(button) {
 
 function closeCategoryEditModal() { hideModal("modalCategoryEdit"); }
 
+function openUserCreateModal() { showModal("modalUserCreate"); }
+function closeUserCreateModal() { hideModal("modalUserCreate"); }
+
+function openUserEditModal(button) {
+    const dataset = button.dataset;
+    const form = document.getElementById("userEditForm");
+
+    form.action = `/usuarios/editar/${dataset.id}`;
+    document.getElementById("edit_usuario_nome").value = dataset.nome || "";
+    document.getElementById("edit_usuario_email").value = dataset.email || "";
+    document.getElementById("edit_usuario_perfil").value = dataset.perfil || "Operador";
+    document.getElementById("edit_usuario_status").value = dataset.status || "Ativo";
+
+    showModal("modalUserEdit");
+}
+
+function closeUserEditModal() { hideModal("modalUserEdit"); }
+
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         closeProductViewModal();
@@ -81,6 +99,8 @@ document.addEventListener("keydown", function(event) {
         closeEditModal();
         closeCategoryCreateModal();
         closeCategoryEditModal();
+        closeUserCreateModal();
+        closeUserEditModal();
         closeTypeCreateModal();
         closeTypeEditModal();
         closeLocalCreateModal();

@@ -9,7 +9,6 @@
 <body>
     <aside class="sidebar">
         <div class="brand">
-            <span class="brand-icon">SN</span>
             <div>
                 <strong>SNPRO</strong>
                 <small>ESTOQUE</small>
@@ -23,6 +22,9 @@
             <a class="{% if active_page == 'locais' %}active{% endif %}" href="{{ url_for('main.locais') }}"><span class="nav-ico">⌖</span> Locais</a>
             <a class="{% if active_page == 'movimentacoes' %}active{% endif %}" href="{{ url_for('main.movimentacoes') }}"><span class="nav-ico">↔</span> Movimentações</a>
             <a class="{% if active_page == 'relatorios' %}active{% endif %}" href="{{ url_for('main.relatorios') }}"><span class="nav-ico">▤</span> Relatórios</a>
+            {% if g.usuario_atual and g.usuario_atual.perfil == 'Administrador' %}
+            <a class="{% if active_page == 'usuarios' %}active{% endif %}" href="{{ url_for('main.usuarios') }}"><span class="nav-ico">◎</span> Usuarios</a>
+            {% endif %}
         </nav>
         <div class="version">
             <strong>SNPro Tecnologia</strong><br>
@@ -32,7 +34,13 @@
 
     <main class="content">
         <header class="topbar">
-            <div class="user"><span class="avatar">EJ</span> euler.junior</div>
+            {% if g.usuario_atual %}
+            <div class="user">
+                <span class="avatar">{{ g.usuario_atual.nome[:2]|upper }}</span>
+                <span>{{ g.usuario_atual.nome }}</span>
+                <a class="logout-link" href="{{ url_for('main.logout') }}">Sair</a>
+            </div>
+            {% endif %}
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}

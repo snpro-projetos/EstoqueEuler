@@ -1,13 +1,86 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file, session, g
 from sqlalchemy import or_, func
 import csv
+import os
 from io import StringIO, BytesIO
 from unicodedata import normalize
 from . import db
 from datetime import datetime
-from .models import Produto, Equipamento, TipoProduto, Local, Movimentacao, DashboardGrafico, ImportacaoPlanilha
+from werkzeug.security import generate_password_hash, check_password_hash
+from .models import Produto, Equipamento, TipoProduto, Local, Movimentacao, DashboardGrafico, ImportacaoPlanilha, Usuario
 
 main = Blueprint("main", __name__)
+_usuarios_iniciais_verificados = False
+
+
+def _destino_seguro(destino):
+    if destino and destino.startswith("/") and not destino.startswith("//"):
+        return destino
+    return url_for("main.dashboard")
+
+
+def _garantir_usuario_admin():
+    global _usuarios_iniciais_verificados
+    if _usuarios_iniciais_verificados:
+        return
+
+    db.create_all()
+    if Usuario.query.count() == 0:
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin@snpro.local").strip().lower()
+        admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+        db.session.add(Usuario(
+            nome="Administrador",
+            email=admin_email,
+            senha_hash=generate_password_hash(admin_password),
+            perfil="Administrador",
+            status="Ativo",
+        ))
+        db.session.commit()
+    _usuarios_iniciais_verificados = True
+
+
+def _usuario_eh_admin():
+    return bool(getattr(g, "usuario_atual", None) and g.usuario_atual.perfil == "Administrador")
+
+
+def _exigir_admin():
+    if _usuario_eh_admin():
+        return None
+    flash("Apenas administradores podem acessar esta area.", "error")
+    return redirect(url_for("main.dashboard"))
+
+
+def _qtd_admins_ativos(excluir_id=None):
+    query = Usuario.query.filter_by(perfil="Administrador", status="Ativo")
+    if excluir_id:
+        query = query.filter(Usuario.id != excluir_id)
+    return query.count()
+
+
+@main.before_app_request
+def carregar_usuario_logado():
+    if request.endpoint == "static":
+        return None
+
+    _garantir_usuario_admin()
+
+    g.usuario_atual = None
+    usuario_id = session.get("usuario_id")
+    if usuario_id:
+        usuario = Usuario.query.get(usuario_id)
+        if usuario and usuario.status == "Ativo":
+            g.usuario_atual = usuario
+        else:
+            session.clear()
+
+    if request.endpoint in {"main.login"}:
+        return None
+
+    if not g.usuario_atual:
+        proxima = request.full_path if request.method == "GET" else request.path
+        return redirect(url_for("main.login", proxima=proxima))
+
+    return None
 
 EQUIPAMENTOS_PADRAO = [
     ("Periferico", "Itens como mouse, teclado, monitor, webcam e headset"),
@@ -380,6 +453,129 @@ def _garantir_graficos_padrao():
         ]
         db.session.add_all(padroes)
         db.session.commit()
+
+
+@main.route("/login", methods=["GET", "POST"])
+def login():
+    if getattr(g, "usuario_atual", None) and request.method == "GET":
+        return redirect(_destino_seguro(request.args.get("proxima")))
+
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        senha = request.form.get("senha", "")
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        if usuario and usuario.status == "Ativo" and check_password_hash(usuario.senha_hash, senha):
+            session.clear()
+            session["usuario_id"] = usuario.id
+            flash("Login realizado com sucesso.", "success")
+            return redirect(_destino_seguro(request.args.get("proxima")))
+
+        flash("E-mail ou senha invalidos.", "error")
+
+    return render_template("login.html")
+
+
+@main.route("/logout")
+def logout():
+    session.clear()
+    flash("Voce saiu do sistema.", "success")
+    return redirect(url_for("main.login"))
+
+
+@main.route("/usuarios")
+def usuarios():
+    bloqueio = _exigir_admin()
+    if bloqueio:
+        return bloqueio
+
+    usuarios_lista = Usuario.query.order_by(Usuario.nome.asc()).all()
+    return render_template("usuarios.html", active_page="usuarios", usuarios=usuarios_lista)
+
+
+@main.route("/usuarios/novo", methods=["POST"])
+def novo_usuario():
+    bloqueio = _exigir_admin()
+    if bloqueio:
+        return bloqueio
+
+    try:
+        senha = request.form.get("senha", "")
+        if len(senha) < 6:
+            raise ValueError("a senha precisa ter pelo menos 6 caracteres")
+
+        usuario = Usuario(
+            nome=request.form["nome"].strip(),
+            email=request.form["email"].strip().lower(),
+            senha_hash=generate_password_hash(senha),
+            perfil=request.form.get("perfil") or "Operador",
+            status=request.form.get("status") or "Ativo",
+        )
+        db.session.add(usuario)
+        db.session.commit()
+        flash("Usuario cadastrado com sucesso.", "success")
+    except Exception as erro:
+        db.session.rollback()
+        flash(f"Erro ao cadastrar usuario: {erro}", "error")
+
+    return redirect(url_for("main.usuarios"))
+
+
+@main.route("/usuarios/editar/<int:usuario_id>", methods=["POST"])
+def editar_usuario(usuario_id):
+    bloqueio = _exigir_admin()
+    if bloqueio:
+        return bloqueio
+
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    try:
+        perfil_novo = request.form.get("perfil") or "Operador"
+        status_novo = request.form.get("status") or "Ativo"
+        removeria_admin = usuario.perfil == "Administrador" and (perfil_novo != "Administrador" or status_novo != "Ativo")
+        if removeria_admin and _qtd_admins_ativos(excluir_id=usuario.id) == 0:
+            raise ValueError("nao e possivel remover o ultimo administrador ativo")
+
+        usuario.nome = request.form["nome"].strip()
+        usuario.email = request.form["email"].strip().lower()
+        usuario.perfil = perfil_novo
+        usuario.status = status_novo
+
+        senha = request.form.get("senha", "")
+        if senha:
+            if len(senha) < 6:
+                raise ValueError("a senha precisa ter pelo menos 6 caracteres")
+            usuario.senha_hash = generate_password_hash(senha)
+
+        db.session.commit()
+        flash("Usuario atualizado com sucesso.", "success")
+    except Exception as erro:
+        db.session.rollback()
+        flash(f"Erro ao atualizar usuario: {erro}", "error")
+
+    return redirect(url_for("main.usuarios"))
+
+
+@main.route("/usuarios/excluir/<int:usuario_id>", methods=["POST"])
+def excluir_usuario(usuario_id):
+    bloqueio = _exigir_admin()
+    if bloqueio:
+        return bloqueio
+
+    usuario = Usuario.query.get_or_404(usuario_id)
+
+    if g.usuario_atual and usuario.id == g.usuario_atual.id:
+        flash("Voce nao pode excluir seu proprio usuario.", "error")
+        return redirect(url_for("main.usuarios"))
+
+    if usuario.perfil == "Administrador" and usuario.status == "Ativo" and _qtd_admins_ativos(excluir_id=usuario.id) == 0:
+        flash("Nao e possivel excluir o ultimo administrador ativo.", "error")
+        return redirect(url_for("main.usuarios"))
+
+    db.session.delete(usuario)
+    db.session.commit()
+    flash("Usuario excluido com sucesso.", "success")
+    return redirect(url_for("main.usuarios"))
 
 
 @main.route("/dashboard")
