@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | SNPro Estoque</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+    <main class="login-wrapper">
+        <section class="login-card">
+            <div class="login-brand">
+                <span class="brand-icon">SN</span>
+                <div>
+                    <strong>ESTOQUE</strong>
+                    <small>SNPRO</small>
+                </div>
+            </div>
+
+            <h1>Acessar estoque</h1>
+            <p>Entre com o email e senha autorizados para acessar o EstoqueMaster.</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="messages login-messages">
+                        {% for category, message in messages %}
+                            <div class="alert {{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="post" class="login-form">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Digite seu e-mail" required autofocus>
+
+                <label for="senha">Senha</label>
+                <input type="password" id="senha" name="senha" placeholder="Digite sua senha" required>
+
+                <button type="submit">Entrar</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

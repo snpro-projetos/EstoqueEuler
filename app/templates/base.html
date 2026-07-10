@@ -32,7 +32,7 @@
 
     <main class="content">
         <header class="topbar">
-            <div class="user"><span class="avatar">EJ</span> euler.junior</div>
+            <div class="user"><span class="avatar">EJ</span> euler.junior <a class="logout-link" href="{{ url_for('main.logout') }}">Sair</a></div>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}

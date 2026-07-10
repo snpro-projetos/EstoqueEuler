@@ -13,7 +13,7 @@
     <input type="text" name="busca" placeholder="Buscar produto..." value="{{ busca }}">
 
     <select name="equipamento">
-        <option value="">Todos os equipamentos</option>
+        <option value="">Todas equipamentos</option>
         {% for item in equipamentos %}
             <option value="{{ item }}" {% if equipamento == item %}selected{% endif %}>{{ item }}</option>
         {% endfor %}
@@ -42,7 +42,7 @@
                 <th>Produto</th>
                 <th>Código</th>
                 <th>Equipamento</th>
-                <th>Qtd</th>
+                <th>Quantidade</th>
                 <th>Locais</th>
                 <th>Status</th>
                 <th>Ações</th>

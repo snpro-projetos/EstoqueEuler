@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, session
 from sqlalchemy import or_, func
+import os
 import csv
 from io import StringIO
 from unicodedata import normalize
@@ -10,23 +11,63 @@ from .models import Produto, Equipamento, TipoProduto, Local, Movimentacao, Dash
 main = Blueprint("main", __name__)
 
 EQUIPAMENTOS_PADRAO = [
-    ("Periferico", "Itens como mouse, teclado, monitor, webcam e headset"),
+    ("Periférico", "Itens como mouse, teclado, monitor, webcam e headset"),
     ("Desktop", "Computadores, gabinetes e equipamentos de mesa"),
     ("Notebook", "Notebooks, carregadores e componentes relacionados"),
-    ("Servidor", "Servidores, pecas e componentes de infraestrutura"),
+    ("Servidor", "Servidores, peças e componentes de infraestrutura"),
 ]
 
 TIPOS_PRODUTO_PADRAO = [
     ("SSD", "Unidades de estado solido"),
     ("Processador", "CPUs e componentes de processamento"),
-    ("Memória", "Memorias RAM e modulos relacionados"),
-    ("Hard Disk", "Discos rigidos e armazenamentos magneticos"),
+    ("Memória", "Memórias RAM e módulos relacionados"),
+    ("Hard Disk", "Discos rígidos e armazenamentos magnéticos"),
 ]
 LOCAIS_PADRAO = [
     ("EP-Prateleira 3A", "Estoque Principal", "Prateleira principal para itens menores"),
-    ("EP-Prateleira 3B", "Estoque Principal", "Prateleira intermediaria do estoque"),
+    ("EP-Prateleira 3B", "Estoque Principal", "Prateleira intermediária do estoque"),
     ("EP-Prateleira 3C", "Estoque Principal", "Prateleira superior do estoque"),
 ]
+
+LOGIN_EMAIL = os.getenv("LOGIN_EMAIL", "euler.junior@snpro.com.br")
+LOGIN_PASSWORD = os.getenv("LOGIN_PASSWORD", "EstoqueEuler2026")
+
+
+@main.before_request
+def exigir_login():
+    rotas_livres = {"main.login", "static"}
+    if request.endpoint in rotas_livres or request.endpoint is None:
+        return None
+    if session.get("usuario_logado") == LOGIN_EMAIL:
+        return None
+    return redirect(url_for("main.login", next=request.full_path))
+
+
+@main.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("usuario_logado") == LOGIN_EMAIL:
+        return redirect(url_for("main.dashboard"))
+
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+        senha = request.form.get("senha") or ""
+
+        if email == LOGIN_EMAIL.lower() and senha == LOGIN_PASSWORD:
+            session.clear()
+            session["usuario_logado"] = LOGIN_EMAIL
+            proxima = request.args.get("next") or url_for("main.dashboard")
+            return redirect(proxima)
+
+        flash("Email ou senha inválidos.", "danger")
+
+    return render_template("login.html")
+
+
+@main.route("/logout")
+def logout():
+    session.clear()
+    flash("Você saiu do sistema.", "success")
+    return redirect(url_for("main.login"))
 
 
 def _int_form(nome_campo, valor_padrao=0):
@@ -48,6 +89,75 @@ def _normalizar_chave(valor):
     return valor.strip().lower().replace(" ", "_").replace("-", "_")
 
 
+def _corrigir_nome_tipo_produto(nome):
+    """Padroniza nomes comuns que vinham sem acento nas versões anteriores."""
+    texto = str(nome or "").strip()
+    if not texto:
+        return texto
+
+    correcoes = {
+        "memoria": "Memória",
+    }
+    return correcoes.get(_normalizar_chave(texto), texto)
+
+
+def _corrigir_texto_produto(nome):
+    texto = str(nome or "").strip()
+    return texto.replace("Memoria", "Memória").replace("memoria", "memória")
+
+
+def _aplicar_correcoes_padrao():
+    """Atualiza dados legados para manter o padrão visual com acentos.
+
+    Isso corrige bancos já criados com nomes antigos, como Memoria -> Memória.
+    Também evita duplicidade quando já existir uma linha antiga e uma nova.
+    """
+    alterou = False
+
+    correcoes_tipos = {
+        "Memoria": ("Memória", "Memórias RAM e módulos relacionados"),
+    }
+
+    for antigo, (novo, descricao) in correcoes_tipos.items():
+        antigo_obj = TipoProduto.query.filter_by(nome=antigo).first()
+        novo_obj = TipoProduto.query.filter_by(nome=novo).first()
+
+        if antigo_obj and novo_obj and antigo_obj.id != novo_obj.id:
+            Produto.query.filter_by(tipo_produto=antigo).update({"tipo_produto": novo})
+            db.session.delete(antigo_obj)
+            novo_obj.descricao = descricao
+            alterou = True
+        elif antigo_obj:
+            Produto.query.filter_by(tipo_produto=antigo).update({"tipo_produto": novo})
+            descricao_antiga = antigo_obj.descricao or ""
+            antigo_obj.nome = novo
+            if descricao_antiga.strip() in {"", "Memorias RAM e modulos relacionados"}:
+                antigo_obj.descricao = descricao
+            alterou = True
+        elif novo_obj and (novo_obj.descricao or "").strip() in {"", "Memorias RAM e modulos relacionados"}:
+            novo_obj.descricao = descricao
+            alterou = True
+
+    for produto in Produto.query.all():
+        novo_nome = _corrigir_texto_produto(produto.nome)
+        novo_tipo = _corrigir_nome_tipo_produto(produto.tipo_produto)
+        if produto.nome != novo_nome:
+            produto.nome = novo_nome
+            alterou = True
+        if produto.tipo_produto != novo_tipo:
+            produto.tipo_produto = novo_tipo
+            alterou = True
+
+    for movimentacao in Movimentacao.query.all():
+        novo_nome = _corrigir_texto_produto(movimentacao.produto_nome)
+        if movimentacao.produto_nome != novo_nome:
+            movimentacao.produto_nome = novo_nome
+            alterou = True
+
+    if alterou:
+        db.session.commit()
+
+
 def _impacto_estoque(tipo, quantidade):
     if tipo in ["Entrada", "Retorno"]:
         return quantidade
@@ -62,10 +172,10 @@ def _registrar_movimentacao(produto, tipo, quantidade, valor_unitario, local, ob
 
     impacto = _impacto_estoque(tipo, quantidade)
     if impacto < 0 and produto.quantidade + impacto < 0:
-        raise ValueError("quantidade indisponivel em estoque")
+        raise ValueError("quantidade indisponível em estoque")
 
     if tipo not in ["Entrada", "Saida", "Transferência", "Empréstimo", "Retorno", "Manutenção", "Descarte"]:
-        raise ValueError("tipo de movimentacao invalido")
+        raise ValueError("tipo de movimentação inválido")
 
     produto.quantidade += impacto
     if tipo == "Transferência" or local:
@@ -103,7 +213,7 @@ def _ler_linhas_planilha(arquivo):
         try:
             from openpyxl import load_workbook
         except Exception as erro:
-            raise RuntimeError("para importar Excel, instale a dependencia openpyxl com: pip install -r requirements.txt") from erro
+            raise RuntimeError("para importar Excel, instale a dependência openpyxl com: pip install -r requirements.txt") from erro
         wb = load_workbook(arquivo.stream, read_only=True, data_only=True)
         ws = wb.active
         linhas = list(ws.iter_rows(values_only=True))
@@ -117,7 +227,7 @@ def _ler_linhas_planilha(arquivo):
             dados.append({cabecalhos[i]: linha[i] if i < len(linha) else None for i in range(len(cabecalhos))})
         return dados
 
-    raise ValueError("formato invalido. Envie um arquivo .csv ou .xlsx")
+    raise ValueError("formato inválido. Envie um arquivo .csv ou .xlsx")
 
 
 
@@ -172,7 +282,7 @@ def _garantir_equipamentos_padrao():
         db.session.commit()
 
 
-def _nomes_equipamentos_ativos():
+def _nomes_equipamentos_ativas():
     _garantir_equipamentos_padrao()
     return [c.nome for c in Equipamento.query.filter_by(status="Ativo").order_by(Equipamento.nome.asc()).all()]
 
@@ -182,6 +292,7 @@ def _garantir_tipos_padrao():
         for nome, descricao in TIPOS_PRODUTO_PADRAO:
             db.session.add(TipoProduto(nome=nome, descricao=descricao, status="Ativo"))
         db.session.commit()
+    _aplicar_correcoes_padrao()
 
 
 def _nomes_tipos_ativos():
@@ -472,7 +583,7 @@ def produtos():
         "produtos.html",
         active_page="produtos",
         produtos=produtos_lista,
-        equipamentos=_nomes_equipamentos_ativos(),
+        equipamentos=_nomes_equipamentos_ativas(),
         tipos_produto=_nomes_tipos_ativos(),
         locais=_nomes_locais_ativos(),
         busca=busca,
@@ -487,9 +598,9 @@ def novo_produto():
     try:
         produto = Produto(
             sku=request.form["sku"].strip(),
-            nome=request.form["nome"].strip(),
+            nome=_corrigir_texto_produto(request.form["nome"]),
             equipamento=request.form["equipamento"],
-            tipo_produto=request.form.get("tipo_produto") or None,
+            tipo_produto=_corrigir_nome_tipo_produto(request.form.get("tipo_produto") or None),
             local=request.form["local"],
             quantidade=_int_form("quantidade", 1),
             estoque_minimo=_int_form("estoque_minimo", 1),
@@ -513,9 +624,9 @@ def editar_produto(produto_id):
 
     try:
         produto.sku = request.form["sku"].strip()
-        produto.nome = request.form["nome"].strip()
+        produto.nome = _corrigir_texto_produto(request.form["nome"])
         produto.equipamento = request.form["equipamento"]
-        produto.tipo_produto = request.form.get("tipo_produto") or None
+        produto.tipo_produto = _corrigir_nome_tipo_produto(request.form.get("tipo_produto") or None)
         produto.local = request.form["local"]
         produto.quantidade = _int_form("quantidade", 1)
         produto.estoque_minimo = _int_form("estoque_minimo", 1)
@@ -537,7 +648,7 @@ def excluir_produto(produto_id):
     produto = Produto.query.get_or_404(produto_id)
     db.session.delete(produto)
     db.session.commit()
-    flash("Produto excluido com sucesso.", "success")
+    flash("Produto excluído com sucesso.", "success")
     return redirect(url_for("main.produtos"))
 
 
@@ -592,12 +703,12 @@ def excluir_equipamento(equipamento_id):
 
     produto_vinculado = Produto.query.filter_by(equipamento=equipamento.nome).first()
     if produto_vinculado:
-        flash("Nao foi possivel excluir: existem produtos usando este equipamento.", "error")
+        flash("Não foi possível excluir: existem produtos usando este equipamento.", "error")
         return redirect(url_for("main.equipamentos"))
 
     db.session.delete(equipamento)
     db.session.commit()
-    flash("Equipamento excluido com sucesso.", "success")
+    flash("Equipamento excluído com sucesso.", "success")
     return redirect(url_for("main.equipamentos"))
 
 
@@ -612,7 +723,7 @@ def tipos_produto():
 def novo_tipo_produto():
     try:
         tipo = TipoProduto(
-            nome=request.form["nome"].strip(),
+            nome=_corrigir_nome_tipo_produto(request.form["nome"]),
             descricao=request.form.get("descricao") or None,
             status=request.form.get("status") or "Ativo",
         )
@@ -631,7 +742,7 @@ def editar_tipo_produto(tipo_id):
     nome_antigo = tipo.nome
 
     try:
-        tipo.nome = request.form["nome"].strip()
+        tipo.nome = _corrigir_nome_tipo_produto(request.form["nome"])
         tipo.descricao = request.form.get("descricao") or None
         tipo.status = request.form.get("status") or "Ativo"
 
@@ -657,7 +768,7 @@ def excluir_tipo_produto(tipo_id):
 
     db.session.delete(tipo)
     db.session.commit()
-    flash("Tipo de produto excluido com sucesso.", "success")
+    flash("Tipo de produto excluído com sucesso.", "success")
     return redirect(url_for("main.tipos_produto"))
 
 
@@ -798,7 +909,7 @@ def editar_movimentacao(movimentacao_id):
 
         impacto = _impacto_estoque(tipo, quantidade)
         if impacto < 0 and produto.quantidade + impacto < 0:
-            raise ValueError("quantidade indisponivel em estoque para a correcao")
+            raise ValueError("quantidade indisponível em estoque para a correcao")
 
         produto.quantidade += impacto
         produto.local = local
@@ -899,10 +1010,10 @@ def importar_planilha():
 
         for indice, linha in enumerate(linhas, start=1):
             sku = _texto_padrao(_valor_linha(linha, "sku", "codigo", "código", "cod", "Código"), _sku_auto(indice))
-            nome = _texto_padrao(_valor_linha(linha, "nome", "produto", "nome_produto"), f"Produto importado {indice}")
+            nome = _corrigir_texto_produto(_texto_padrao(_valor_linha(linha, "nome", "produto", "nome_produto"), f"Produto importado {indice}"))
 
             equipamento = _texto_padrao(_valor_linha(linha, "equipamento"), "Sem Equipamento")
-            tipo_produto = _texto_padrao(_valor_linha(linha, "tipo", "tipo_produto"), "Sem Tipo")
+            tipo_produto = _corrigir_nome_tipo_produto(_texto_padrao(_valor_linha(linha, "tipo", "tipo_produto"), "Sem Tipo"))
             local = _texto_padrao(_valor_linha(linha, "local", "locais", "armazenamento"), "Estoque Principal")
             quantidade = _to_int(_valor_linha(linha, "quantidade", "qtd"), 0)
             estoque_minimo = _to_int(_valor_linha(linha, "estoque_minimo", "estoque mínimo", "limite_estoque_baixo"), 0)
@@ -976,13 +1087,13 @@ def apagar_dados_importados():
                     skus.add(sku)
 
         if not skus:
-            equipamentos_importados = [c.nome for c in Equipamento.query.filter_by(descricao="Importado da planilha").all()]
+            equipamentos_importadas = [c.nome for c in Equipamento.query.filter_by(descricao="Importado da planilha").all()]
             tipos_importados = [t.nome for t in TipoProduto.query.filter_by(descricao="Importado da planilha").all()]
             locais_importados = [l.nome for l in Local.query.filter_by(descricao="Importado da planilha").all()]
             produtos = Produto.query.filter(
                 or_(
                     Produto.sku.like("AUTO-%"),
-                    Produto.equipamento.in_(equipamentos_importados or ["__sem_equipamento_importado__"]),
+                    Produto.equipamento.in_(equipamentos_importadas or ["__sem_equipamento_importada__"]),
                     Produto.tipo_produto.in_(tipos_importados or ["__sem_tipo_importado__"]),
                     Produto.local.in_(locais_importados or ["__sem_local_importado__"]),
                 )
@@ -1027,18 +1138,18 @@ def seed():
     _garantir_locais_padrao()
     if Produto.query.count() == 0:
         exemplos = [
-            ("MPC20152", "Memoria Smart PC2 1RX8 1GB"),
-            ("MPC20151", "Memoria Smart PC2 1RX8 1GB"),
-            ("MPC22433", "Memoria Smart PC2 1RX4 1GB"),
-            ("MPC20142", "Memoria Markvision PC2 1GB"),
-            ("MPC20150", "Memoria Kingston PC2 1GB"),
+            ("MPC20152", "Memória Smart PC2 1RX8 1GB"),
+            ("MPC20151", "Memória Smart PC2 1RX8 1GB"),
+            ("MPC22433", "Memória Smart PC2 1RX4 1GB"),
+            ("MPC20142", "Memória Markvision PC2 1GB"),
+            ("MPC20150", "Memória Kingston PC2 1GB"),
         ]
         for sku, nome in exemplos:
             produto = Produto(
                 sku=sku,
                 nome=nome,
-                equipamento="Periferico",
-                tipo_produto="Memoria",
+                equipamento="Periférico",
+                tipo_produto="Memória",
                 local="EP-Prateleira 3C",
                 quantidade=1,
                 estoque_minimo=1,
