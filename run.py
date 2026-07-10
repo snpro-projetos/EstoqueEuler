@@ -24,7 +24,6 @@ def _compatibilizar_banco_antigo():
     nomes_tabelas = {linha[0] for linha in tabelas}
 
     if "produtos" in nomes_tabelas:
-        colunas = db.session.execute(text("PRAGMA table_info(produtos)")).fetchall()
         nomes_colunas = {coluna[1] for coluna in colunas}
         if antigo_singular in nomes_colunas and "equipamento" not in nomes_colunas:
             db.session.execute(text(f"ALTER TABLE produtos RENAME COLUMN {antigo_singular} TO equipamento"))

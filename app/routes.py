@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file, session, g
-from sqlalchemy import or_, func
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file, session, g, jsonify
+from sqlalchemy import or_, func, text
 import csv
 import os
 from io import StringIO, BytesIO
@@ -26,8 +26,11 @@ def _garantir_usuario_admin():
 
     db.create_all()
     if Usuario.query.count() == 0:
-        admin_email = os.environ.get("ADMIN_EMAIL", "admin@snpro.local").strip().lower()
-        admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+        admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+        admin_password = os.environ.get("ADMIN_PASSWORD", "")
+        if not admin_email or not admin_password:
+            raise RuntimeError("Configure ADMIN_EMAIL e ADMIN_PASSWORD no .env antes de iniciar com banco vazio.")
+
         db.session.add(Usuario(
             nome="Administrador",
             email=admin_email,
@@ -62,6 +65,9 @@ def carregar_usuario_logado():
     if request.endpoint == "static":
         return None
 
+    if request.endpoint in {"main.teste_banco"}:
+        return None
+
     _garantir_usuario_admin()
 
     g.usuario_atual = None
@@ -81,6 +87,15 @@ def carregar_usuario_logado():
         return redirect(url_for("main.login", proxima=proxima))
 
     return None
+
+
+@main.route("/teste-banco")
+def teste_banco():
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "ok", "database": "connected"})
+    except Exception:
+        return jsonify({"status": "error", "message": "falha ao conectar ao banco"}), 500
 
 EQUIPAMENTOS_PADRAO = [
     ("Periferico", "Itens como mouse, teclado, monitor, webcam e headset"),
