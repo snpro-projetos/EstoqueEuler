@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file, session, g, jsonify
-from sqlalchemy import or_, func, text
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, send_file, session, g
+from sqlalchemy import or_, func
 import csv
 import os
 from io import StringIO, BytesIO
@@ -66,9 +66,6 @@ def carregar_usuario_logado():
     if request.endpoint == "static":
         return None
 
-    if request.endpoint in {"main.teste_banco"}:
-        return None
-
     _garantir_usuario_admin()
 
     g.usuario_atual = None
@@ -89,14 +86,6 @@ def carregar_usuario_logado():
 
     return None
 
-
-@main.route("/teste-banco")
-def teste_banco():
-    try:
-        db.session.execute(text("SELECT 1"))
-        return jsonify({"status": "ok", "database": "connected"})
-    except Exception:
-        return jsonify({"status": "error", "message": "falha ao conectar ao banco"}), 500
 
 EQUIPAMENTOS_PADRAO = [
     ("Periferico", "Itens como mouse, teclado, monitor, webcam e headset"),
