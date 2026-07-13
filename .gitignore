@@ -4,6 +4,7 @@
 
 __pycache__/
 *.py[cod]
+*.pyc
 
 venv/
 .venv/
@@ -11,3 +12,4 @@ venv/
 instance/*.db
 instance/*.sqlite
 instance/*.sqlite3
+instance/*dump*.sql

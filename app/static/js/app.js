@@ -199,7 +199,30 @@ function openLocalEditModal(button) {
 
 function closeLocalEditModal() { hideModal("modalLocalEdit"); }
 
-function openMovementCreateModal() { showModal("modalMovementCreate"); }
+function updateMovementLocationFields(prefix) {
+    const tipo = document.getElementById(`${prefix}_mov_tipo`);
+    const origemGroup = document.getElementById(`${prefix}_mov_local_origem_group`);
+    const origemLabel = document.getElementById(`${prefix}_mov_local_origem_label`);
+    const origemInput = document.getElementById(`${prefix}_mov_local_origem`);
+    const destinoGroup = document.getElementById(`${prefix}_mov_local_destino_group`);
+    const destinoInput = document.getElementById(`${prefix}_mov_local_destino`);
+
+    if (!tipo || !origemGroup || !origemInput || !destinoGroup || !destinoInput) return;
+
+    const isTransferencia = tipo.value === "Transferência";
+    if (origemLabel) origemLabel.textContent = "Local de origem *";
+
+    origemInput.required = true;
+    destinoInput.required = isTransferencia;
+    destinoGroup.classList.toggle("hidden", !isTransferencia);
+
+    if (!isTransferencia) destinoInput.value = "";
+}
+
+function openMovementCreateModal() {
+    updateMovementLocationFields("create");
+    showModal("modalMovementCreate");
+}
 function closeMovementCreateModal() { hideModal("modalMovementCreate"); }
 
 function openMovementEditModal(button) {
@@ -210,9 +233,11 @@ function openMovementEditModal(button) {
     document.getElementById("edit_mov_tipo").value = dataset.tipo || "Entrada";
     document.getElementById("edit_mov_produto_id").value = dataset.produtoId || "";
     document.getElementById("edit_mov_quantidade").value = dataset.quantidade || 1;
-    document.getElementById("edit_mov_local").value = dataset.local || "";
+    document.getElementById("edit_mov_local_origem").value = dataset.localOrigem || dataset.local || "";
+    document.getElementById("edit_mov_local_destino").value = dataset.localDestino || "";
     document.getElementById("edit_mov_criado_em").value = dataset.criadoEm || "";
     document.getElementById("edit_mov_observacao").value = dataset.observacao || "";
+    updateMovementLocationFields("edit");
 
     showModal("modalMovementEdit");
 }
@@ -228,6 +253,12 @@ document.addEventListener("change", function(event) {
         const label = document.getElementById("arquivoImportacaoNome");
         const file = event.target.files && event.target.files[0];
         if (label) label.textContent = file ? file.name : "Nenhum arquivo selecionado";
+    }
+    if (event.target && event.target.id === "create_mov_tipo") {
+        updateMovementLocationFields("create");
+    }
+    if (event.target && event.target.id === "edit_mov_tipo") {
+        updateMovementLocationFields("edit");
     }
 });
 

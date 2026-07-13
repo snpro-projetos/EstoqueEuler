@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set status_produto_opcoes = ['Ativo', 'Inativo', 'Testar', 'Funcionando', 'Descarte'] %}
 <section class="page-header">
     <div>
         <h1>Produtos</h1>
@@ -28,8 +29,9 @@
 
     <select name="status">
         <option value="">Todos</option>
-        <option value="Ativo" {% if status == "Ativo" %}selected{% endif %}>Ativo</option>
-        <option value="Inativo" {% if status == "Inativo" %}selected{% endif %}>Inativo</option>
+        {% for item in status_produto_opcoes %}
+            <option value="{{ item }}" {% if status == item %}selected{% endif %}>{{ item }}</option>
+        {% endfor %}
     </select>
 
     <button class="btn-light" type="submit">Filtrar</button>
@@ -190,8 +192,9 @@
 
             <label>Status</label>
             <select name="status">
-                <option value="Ativo">Ativo</option>
-                <option value="Inativo">Inativo</option>
+                {% for item in status_produto_opcoes %}
+                    <option value="{{ item }}">{{ item }}</option>
+                {% endfor %}
             </select>
 
             <label>Descrição</label>
@@ -246,8 +249,9 @@
 
             <label>Status</label>
             <select id="edit_status" name="status">
-                <option value="Ativo">Ativo</option>
-                <option value="Inativo">Inativo</option>
+                {% for item in status_produto_opcoes %}
+                    <option value="{{ item }}">{{ item }}</option>
+                {% endfor %}
             </select>
 
             <label>Descrição</label>

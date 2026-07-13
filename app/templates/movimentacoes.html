@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set tipos_movimentacao = [('Entrada', 'Entrada'), ('Saida', 'Saída'), ('Transferência', 'Transferência')] %}
 <section class="page-header">
     <div>
         <h1>Movimentações</h1>
-        <p>Registre entradas, saídas, transferências e demais movimentações do estoque</p>
+        <p>Registre entradas, saídas e transferências do estoque</p>
     </div>
     <button class="btn-primary" onclick="openMovementCreateModal()">+ Nova Movimentação</button>
 </section>
@@ -13,8 +14,8 @@
     <input name="busca" value="{{ busca }}" placeholder="Buscar por produto...">
     <select name="tipo">
         <option value="">Todos os tipos</option>
-        {% for item in ['Entrada', 'Saida', 'Transferência', 'Empréstimo', 'Retorno', 'Manutenção', 'Descarte'] %}
-            <option value="{{ item }}" {% if tipo == item %}selected{% endif %}>{{ item }}</option>
+        {% for valor, rotulo in tipos_movimentacao %}
+            <option value="{{ valor }}" {% if tipo == valor %}selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
     </select>
     <select name="produto_id">
@@ -33,7 +34,7 @@
                 <th>Tipo</th>
                 <th>Produto</th>
                 <th>Qtd</th>
-                <th>Local</th>
+                <th>Origem / Destino</th>
                 <th>Data</th>
                 <th>Ações</th>
             </tr>
@@ -44,7 +45,7 @@
                 <td><span class="movement-badge movement-{{ mov.tipo|lower|replace('í','i')|replace('ç','c')|replace('ã','a')|replace('é','e')|replace('ê','e') }}">{{ mov.tipo }}</span></td>
                 <td><strong>{{ mov.produto_nome }}</strong></td>
                 <td>{{ mov.quantidade }}</td>
-                <td>{{ mov.local }}</td>
+                <td>{{ mov.local_resumo }}</td>
                 <td>{{ mov.criado_em.strftime('%d/%m/%Y, %H:%M') }}</td>
                 <td class="actions">
                     <button
@@ -57,11 +58,13 @@
                         data-produto-id="{{ mov.produto_id }}"
                         data-quantidade="{{ mov.quantidade }}"
                         data-local="{{ mov.local }}"
+                        data-local-origem="{{ mov.local_origem or mov.local }}"
+                        data-local-destino="{{ mov.local_destino or '' }}"
                         data-criado-em="{{ mov.criado_em.strftime('%Y-%m-%dT%H:%M') }}"
                         data-observacao="{{ mov.observacao or '' }}"
-                    >✎</button>
+                    >&#9998;</button>
                     <form method="post" action="{{ url_for('main.excluir_movimentacao', movimentacao_id=mov.id) }}" data-confirm-kind="movimentação" data-confirm-article="esta">
-                        <button title="Excluir" class="icon-btn danger" type="submit">🗑</button>
+                        <button title="Excluir" class="icon-btn danger" type="submit">&#128465;</button>
                     </form>
                 </td>
             </tr>
@@ -74,6 +77,12 @@
     </table>
 </div>
 
+<datalist id="locaisOptions">
+    {% for local in locais %}
+        <option value="{{ local }}"></option>
+    {% endfor %}
+</datalist>
+
 <div id="modalMovementCreate" class="modal hidden">
     <div class="modal-box compact">
         <div class="modal-header">
@@ -83,14 +92,10 @@
 
         <form method="post" action="{{ url_for('main.nova_movimentacao') }}" class="product-form">
             <label>Tipo *</label>
-            <select name="tipo" required>
-                <option value="Entrada">Entrada</option>
-                <option value="Saida">Saída</option>
-                <option value="Transferência">Transferência</option>
-                <option value="Empréstimo">Empréstimo</option>
-                <option value="Retorno">Retorno</option>
-                <option value="Manutenção">Manutenção</option>
-                <option value="Descarte">Descarte</option>
+            <select id="create_mov_tipo" name="tipo" required>
+                {% for valor, rotulo in tipos_movimentacao %}
+                    <option value="{{ valor }}">{{ rotulo }}</option>
+                {% endfor %}
             </select>
 
             <label>Produto *</label>
@@ -104,10 +109,15 @@
             <label>Quantidade *</label>
             <input type="number" name="quantidade" value="1" min="1" required>
 
-            <label>Local *</label>
-            <select name="local" required>
-                {% for local in locais %}<option value="{{ local }}">{{ local }}</option>{% endfor %}
-            </select>
+            <div id="create_mov_local_origem_group">
+                <label id="create_mov_local_origem_label">Local de origem *</label>
+                <input id="create_mov_local_origem" name="local_origem" list="locaisOptions" placeholder="Ex: EP-Prateleira 3A" required>
+            </div>
+
+            <div id="create_mov_local_destino_group" class="hidden">
+                <label>Local de destino *</label>
+                <input id="create_mov_local_destino" name="local_destino" list="locaisOptions" placeholder="Ex: EP-Prateleira 3B">
+            </div>
 
             <label>Observação</label>
             <textarea name="observacao" rows="3" placeholder="Detalhes opcionais da movimentação"></textarea>
@@ -120,7 +130,6 @@
     </div>
 </div>
 
-
 <div id="modalMovementEdit" class="modal hidden">
     <div class="modal-box compact">
         <div class="modal-header">
@@ -131,13 +140,9 @@
         <form id="movementEditForm" method="post" action="#" class="product-form">
             <label>Tipo *</label>
             <select id="edit_mov_tipo" name="tipo" required>
-                <option value="Entrada">Entrada</option>
-                <option value="Saida">Saída</option>
-                <option value="Transferência">Transferência</option>
-                <option value="Empréstimo">Empréstimo</option>
-                <option value="Retorno">Retorno</option>
-                <option value="Manutenção">Manutenção</option>
-                <option value="Descarte">Descarte</option>
+                {% for valor, rotulo in tipos_movimentacao %}
+                    <option value="{{ valor }}">{{ rotulo }}</option>
+                {% endfor %}
             </select>
 
             <label>Produto *</label>
@@ -150,10 +155,15 @@
             <label>Quantidade *</label>
             <input id="edit_mov_quantidade" type="number" name="quantidade" value="1" min="1" required>
 
-            <label>Local *</label>
-            <select id="edit_mov_local" name="local" required>
-                {% for local in locais %}<option value="{{ local }}">{{ local }}</option>{% endfor %}
-            </select>
+            <div id="edit_mov_local_origem_group">
+                <label id="edit_mov_local_origem_label">Local de origem *</label>
+                <input id="edit_mov_local_origem" name="local_origem" list="locaisOptions" required>
+            </div>
+
+            <div id="edit_mov_local_destino_group" class="hidden">
+                <label>Local de destino *</label>
+                <input id="edit_mov_local_destino" name="local_destino" list="locaisOptions">
+            </div>
 
             <label>Data da movimentação</label>
             <input id="edit_mov_criado_em" type="datetime-local" name="criado_em">

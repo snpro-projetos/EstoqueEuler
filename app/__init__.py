@@ -3,7 +3,6 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.engine import URL
 
 
 db = SQLAlchemy()
@@ -17,15 +16,13 @@ def _env_obrigatoria(nome):
 
 
 def _database_uri():
-    return URL.create(
-        "mysql+pymysql",
-        username=_env_obrigatoria("DB_USER"),
-        password=_env_obrigatoria("DB_PASSWORD"),
-        host=_env_obrigatoria("DB_HOST"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        database=_env_obrigatoria("DB_NAME"),
-        query={"charset": "utf8mb4"},
-    ).render_as_string(hide_password=False)
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        return database_url
+
+    return "sqlite:///estoque.db"
 
 
 def create_app():

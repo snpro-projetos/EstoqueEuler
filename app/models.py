@@ -1,5 +1,6 @@
 from . import db
 from datetime import datetime
+from decimal import Decimal
 
 
 class Usuario(db.Model):
@@ -53,13 +54,13 @@ class Produto(db.Model):
     local = db.Column(db.String(100), nullable=False)
     quantidade = db.Column(db.Integer, nullable=False, default=1)
     estoque_minimo = db.Column(db.Integer, nullable=False, default=1)
-    ticket_medio = db.Column(db.Float, nullable=False, default=0.01)
+    ticket_medio = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.01"))
     status = db.Column(db.String(30), nullable=False, default="Ativo")
     descricao = db.Column(db.Text, nullable=True)
 
     @property
     def valor_estoque(self):
-        return self.quantidade * self.ticket_medio
+        return float((self.quantidade or 0) * (self.ticket_medio or 0))
 
     @property
     def status_estoque(self):
@@ -76,13 +77,22 @@ class Movimentacao(db.Model):
     produto_id = db.Column(db.Integer, db.ForeignKey("produtos.id"), nullable=False)
     produto_nome = db.Column(db.String(150), nullable=False)
     quantidade = db.Column(db.Integer, nullable=False, default=1)
-    valor_unitario = db.Column(db.Float, nullable=False, default=0.0)
-    total = db.Column(db.Float, nullable=False, default=0.0)
+    valor_unitario = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    total = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     local = db.Column(db.String(100), nullable=False)
+    local_origem = db.Column(db.String(100), nullable=False)
+    local_destino = db.Column(db.String(100), nullable=True)
     observacao = db.Column(db.Text, nullable=True)
     criado_em = db.Column(db.DateTime, nullable=False)
 
     produto = db.relationship("Produto", backref="movimentacoes")
+
+    @property
+    def local_resumo(self):
+        origem = self.local_origem or self.local
+        if self.tipo == "Transferência" and self.local_destino:
+            return f"{origem} -> {self.local_destino}"
+        return origem
 
 
 class ImportacaoPlanilha(db.Model):

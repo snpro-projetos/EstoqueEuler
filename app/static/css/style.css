@@ -100,10 +100,9 @@ td { padding: 18px 14px; border-top: 1px solid #e4ebf5; font-size: 14px; vertica
 .movement-filters { grid-template-columns: 1fr 180px 220px 90px; }
 .movement-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 900; border: 1px solid transparent; }
 .movement-badge::before { content: "⊙"; font-size: 12px; }
-.movement-entrada, .movement-retorno { background: #dcfce7; color: #047857; border-color: #bbf7d0; }
-.movement-saida, .movement-descarte { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+.movement-entrada { background: #dcfce7; color: #047857; border-color: #bbf7d0; }
+.movement-saida { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 .movement-transferencia { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
-.movement-emprestimo, .movement-manutencao { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 .report-header { padding-bottom: 12px; }
 .report-toolbar { display: flex; gap: 12px; align-items: center; padding: 0 38px 18px; flex-wrap: wrap; }
 .report-select { width: 290px; }

@@ -48,7 +48,7 @@
                 <th>Tipo</th>
                 <th>Produto</th>
                 <th>Qtd</th>
-                <th>Local</th>
+                <th>Origem / Destino</th>
                 <th>Data</th>
                 <th>Observação</th>
             </tr>
@@ -59,7 +59,7 @@
                 <td><span class="movement-badge movement-{{ mov.tipo|lower|replace('í','i')|replace('ç','c')|replace('ã','a')|replace('é','e')|replace('ê','e') }}">{{ mov.tipo }}</span></td>
                 <td><strong>{{ mov.produto_nome }}</strong></td>
                 <td>{{ mov.quantidade }}</td>
-                <td>{{ mov.local }}</td>
+                <td>{{ mov.local_resumo }}</td>
                 <td>{{ mov.criado_em.strftime('%d/%m/%Y, %H:%M') }}</td>
                 <td>{{ mov.observacao or '-' }}</td>
             </tr>

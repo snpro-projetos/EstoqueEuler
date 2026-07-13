@@ -11,6 +11,8 @@ from .models import Produto, Equipamento, TipoProduto, Local, Movimentacao, Dash
 
 main = Blueprint("main", __name__)
 _usuarios_iniciais_verificados = False
+STATUS_PRODUTO = ["Ativo", "Inativo", "Testar", "Funcionando", "Descarte"]
+TIPOS_MOVIMENTACAO = ["Entrada", "Saida", "Transferência"]
 
 
 def _destino_seguro(destino):
@@ -24,7 +26,6 @@ def _garantir_usuario_admin():
     if _usuarios_iniciais_verificados:
         return
 
-    db.create_all()
     if Usuario.query.count() == 0:
         admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
         admin_password = os.environ.get("ADMIN_PASSWORD", "")
@@ -137,27 +138,50 @@ def _normalizar_chave(valor):
 
 
 def _impacto_estoque(tipo, quantidade):
-    if tipo in ["Entrada", "Retorno"]:
+    if tipo == "Entrada":
         return quantidade
-    if tipo in ["Saida", "Empréstimo", "Manutenção", "Descarte"]:
+    if tipo == "Saida":
         return -quantidade
     return 0
 
 
-def _registrar_movimentacao(produto, tipo, quantidade, valor_unitario, local, observacao=None, criado_em=None):
+def _status_produto_form():
+    status = (request.form.get("status") or "Ativo").strip()
+    if status in STATUS_PRODUTO:
+        return status
+    return "Ativo"
+
+
+def _dados_local_movimentacao(tipo, produto):
+    local_origem = (request.form.get("local_origem") or request.form.get("local") or produto.local or "").strip()
+    local_destino = (request.form.get("local_destino") or "").strip()
+
+    if tipo == "Transferência":
+        if not local_origem or not local_destino:
+            raise ValueError("informe o local de origem e o local de destino")
+        return local_origem, local_destino
+
+    if not local_origem:
+        raise ValueError("informe o local de origem")
+    return local_origem, None
+
+
+def _registrar_movimentacao(produto, tipo, quantidade, valor_unitario, local_origem, local_destino=None, observacao=None, criado_em=None):
     if quantidade <= 0:
         raise ValueError("a quantidade precisa ser maior que zero")
+
+    if tipo not in TIPOS_MOVIMENTACAO:
+        raise ValueError("tipo de movimentacao invalido")
 
     impacto = _impacto_estoque(tipo, quantidade)
     if impacto < 0 and produto.quantidade + impacto < 0:
         raise ValueError("quantidade indisponivel em estoque")
 
-    if tipo not in ["Entrada", "Saida", "Transferência", "Empréstimo", "Retorno", "Manutenção", "Descarte"]:
-        raise ValueError("tipo de movimentacao invalido")
-
     produto.quantidade += impacto
-    if tipo == "Transferência" or local:
-        produto.local = local or produto.local
+    if tipo == "Transferência":
+        produto.local = local_destino
+    elif local_origem:
+        produto.local = local_origem
 
     mov = Movimentacao(
         tipo=tipo,
@@ -166,7 +190,9 @@ def _registrar_movimentacao(produto, tipo, quantidade, valor_unitario, local, ob
         quantidade=quantidade,
         valor_unitario=valor_unitario,
         total=quantidade * valor_unitario,
-        local=local or produto.local,
+        local=local_destino if tipo == "Transferência" else local_origem,
+        local_origem=local_origem,
+        local_destino=local_destino,
         observacao=observacao or None,
         criado_em=criado_em or datetime.now(),
     )
@@ -524,7 +550,7 @@ def novo_usuario():
             email=request.form["email"].strip().lower(),
             senha_hash=generate_password_hash(senha),
             perfil=request.form.get("perfil") or "Operador",
-            status=request.form.get("status") or "Ativo",
+            status=_status_produto_form(),
         )
         db.session.add(usuario)
         db.session.commit()
@@ -731,7 +757,7 @@ def editar_produto(produto_id):
         produto.quantidade = _int_form("quantidade", 1)
         produto.estoque_minimo = _int_form("estoque_minimo", 1)
         produto.ticket_medio = 0.0
-        produto.status = request.form.get("status") or "Ativo"
+        produto.status = _status_produto_form()
         produto.descricao = request.form.get("descricao") or None
 
         db.session.commit()
@@ -971,14 +997,15 @@ def nova_movimentacao():
         tipo = request.form["tipo"].strip()
         quantidade = _int_form("quantidade", 1)
         valor_unitario = 0.0
-        local = request.form.get("local") or produto.local
+        local_origem, local_destino = _dados_local_movimentacao(tipo, produto)
 
         _registrar_movimentacao(
             produto=produto,
             tipo=tipo,
             quantidade=quantidade,
             valor_unitario=valor_unitario,
-            local=local,
+            local_origem=local_origem,
+            local_destino=local_destino,
             observacao=request.form.get("observacao"),
         )
         db.session.commit()
@@ -1005,14 +1032,17 @@ def editar_movimentacao(movimentacao_id):
         tipo = request.form["tipo"].strip()
         quantidade = _int_form("quantidade", 1)
         valor_unitario = 0.0
-        local = request.form.get("local") or produto.local
+        local_origem, local_destino = _dados_local_movimentacao(tipo, produto)
+
+        if tipo not in TIPOS_MOVIMENTACAO:
+            raise ValueError("tipo de movimentacao invalido")
 
         impacto = _impacto_estoque(tipo, quantidade)
         if impacto < 0 and produto.quantidade + impacto < 0:
             raise ValueError("quantidade indisponivel em estoque para a correcao")
 
         produto.quantidade += impacto
-        produto.local = local
+        produto.local = local_destino if tipo == "Transferência" else local_origem
         produto.ticket_medio = 0.0
 
         movimentacao.tipo = tipo
@@ -1021,7 +1051,9 @@ def editar_movimentacao(movimentacao_id):
         movimentacao.quantidade = quantidade
         movimentacao.valor_unitario = valor_unitario
         movimentacao.total = quantidade * valor_unitario
-        movimentacao.local = local
+        movimentacao.local = local_destino if tipo == "Transferência" else local_origem
+        movimentacao.local_origem = local_origem
+        movimentacao.local_destino = local_destino
         movimentacao.observacao = request.form.get("observacao") or None
 
         data_mov = request.form.get("criado_em")
@@ -1057,13 +1089,13 @@ def _conteudo_relatorio(tipo):
     tipo = _tipo_relatorio_valido(tipo)
 
     if tipo == "movimentacoes":
-        cabecalhos = ["Tipo", "Produto", "Quantidade", "Local", "Data", "Observacao"]
+        cabecalhos = ["Tipo", "Produto", "Quantidade", "Origem/Destino", "Data", "Observacao"]
         linhas = [
             [
                 mov.tipo,
                 mov.produto_nome,
                 mov.quantidade,
-                mov.local,
+                mov.local_resumo,
                 mov.criado_em.strftime("%d/%m/%Y %H:%M") if mov.criado_em else "",
                 mov.observacao or "",
             ]
@@ -1223,7 +1255,7 @@ def importar_planilha():
                 produto.quantidade = quantidade
                 produto.estoque_minimo = estoque_minimo
                 produto.ticket_medio = 0.0
-                produto.status = status if status in ["Ativo", "Inativo"] else "Ativo"
+                produto.status = status if status in STATUS_PRODUTO else "Ativo"
                 produto.descricao = descricao
                 atualizados += 1
             else:
@@ -1236,7 +1268,7 @@ def importar_planilha():
                     quantidade=quantidade,
                     estoque_minimo=estoque_minimo,
                     ticket_medio=0.0,
-                    status=status if status in ["Ativo", "Inativo"] else "Ativo",
+                    status=status if status in STATUS_PRODUTO else "Ativo",
                     descricao=descricao,
                 )
                 db.session.add(produto)
@@ -1351,6 +1383,7 @@ def seed():
                 valor_unitario=0.0,
                 total=0.0,
                 local="EP-Prateleira 3C",
+                local_origem="EP-Prateleira 3C",
                 criado_em=datetime.now(),
             ))
         db.session.commit()
